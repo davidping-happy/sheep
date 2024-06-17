@@ -1,56 +1,90 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Firebase Form</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Group Meeting</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        .meeting-form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+        .meeting-form h2 {
+            margin-bottom: 20px;
+        }
+        .meeting-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .meeting-form input[type="text"],
+        .meeting-form input[type="date"],
+        .meeting-form input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .meeting-form button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .meeting-form .submit-btn {
+            background-color: #28a745;
+            color: #fff;
+        }
+        @media (max-width: 600px) {
+            .meeting-form {
+                padding: 15px;
+            }
+            .meeting-form h2 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
 </head>
 <body>
-  <h1>成二每週小組聚會</h1>
-  <form id="dataForm">
-    <label for="name">小組/日期:</label>
-    <input type="text" id="name" name="name" required>
-    <br>
-    <label for="number">人數:</label>
-    <input type="number" id="number" name="number" required>
-    <br>
-    <button type="submit">提交</button>
-  </form>
 
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
-  <script>
-    // Your Firebase configuration code here
-    var firebaseConfig = {
-      apiKey: "AIzaSyCPYxRVPcrn2NBjD2ebfyWfimRy2eQ2AzI",
-      authDomain: "weeklyreport-3ab53.firebaseapp.com",
-      projectId: "weeklyreport-3ab53",
-      storageBucket: "weeklyreport-3ab53.appspot.com",
-      messagingSenderId: "564358091107",
-      appId: "1:564358091107:web:296f225372a1bf735fc356",
-      measurementId: "G-90VNFN19GZ"
-    };
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    var db = firebase.firestore();
+    <form class="meeting-form" id="meetingForm">
+        <h2>Weekly Group Meeting</h2>
+        <label for="group">Group</label>
+        <input type="text" id="group" name="group" required>
+        
+        <label for="date">Date</label>
+        <input type="date" id="date" name="date" required>
+        
+        <label for="number">Number of People</label>
+        <input type="number" id="number" name="number" required>
+        
+        <button type="submit" class="submit-btn">Submit</button>
+    </form>
 
-    // Form submission handler
-    document.getElementById('dataForm').addEventListener('submit', function(event) {
-      event.preventDefault();
-      var name = document.getElementById('name').value;
-      var number = document.getElementById('number').value;
+    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
 
-      // Add a new document with a generated id
-      db.collection("users").add({
-        name: name,
-        number: number
-      })
-      .then((docRef) => {
-        console.log("Document written with ID: ", docRef.id);
-        alert("Data successfully submitted!");
-      })
-      .catch((error) => {
-        console.error("Error adding document: ", error);
-      });
-    });
-  </script>
+    <!-- Add Firebase products that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+
+    <!-- Include external JavaScript file -->
+    <script src="script.js"></script>
+
 </body>
 </html>
