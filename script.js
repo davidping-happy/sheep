@@ -13,6 +13,7 @@ var firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 var database = firebase.database();
+const messaging = firebase.messaging();
 
 document.getElementById('meetingForm').addEventListener('submit', submitForm);
 
@@ -35,6 +36,9 @@ function submitForm(e) {
     
     // Clear form
     document.getElementById('meetingForm').reset();
+
+    // Send push notification
+    sendPushNotification(group, date, number);
 }
 
 function saveMeeting(group, date, number) {
@@ -45,3 +49,50 @@ function saveMeeting(group, date, number) {
         number: number
     });
 }
+
+function sendPushNotification(group, date, number) {
+    const payload = {
+        notification: {
+            title: 'New Meeting Submitted',
+            body: `Group: ${group}, Date: ${date}, Participants: ${number}`,
+            click_action: 'https://your-website.com'
+        }
+    };
+
+    messaging.getToken({ vapidKey: 'YOUR_PUBLIC_VAPID_KEY' }).then((token) => {
+        fetch('https://fcm.googleapis.com/fcm/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `key=${firebaseConfig.messagingSenderId}`
+            },
+            body: JSON.stringify({
+                to: token,
+                notification: payload.notification
+            })
+        }).then(response => {
+            if (response.ok) {
+                console.log('Notification sent successfully');
+            } else {
+                console.error('Failed to send notification');
+            }
+        }).catch(error => {
+            console.error('Error sending notification:', error);
+        });
+    }).catch((err) => {
+        console.error('Error retrieving FCM token:', err);
+    });
+}
+
+// Request permission for notifications
+messaging.requestPermission()
+    .then(() => {
+        console.log('Notification permission granted.');
+        return messaging.getToken({ vapidKey: 'YOUR_PUBLIC_VAPID_KEY' });
+    })
+    .then((token) => {
+        console.log('FCM Token:', token);
+    })
+    .catch((err) => {
+        console.error('Unable to get permission to notify.', err);
+    });
