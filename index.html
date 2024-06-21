@@ -51,6 +51,11 @@
             background-color: #28a745;
             color: #fff;
         }
+        .confirmation-message {
+            margin-top: 15px;
+            color: green;
+            display: none;
+        }
         @media (max-width: 600px) {
             .meeting-form {
                 padding: 15px;
@@ -68,13 +73,14 @@
         <label for="group">小組名稱</label>
         <input type="text" id="group" name="group" required>
         
-        <label for="date">日期</label>
+        <label for="date">聚會日期</label>
         <input type="date" id="date" name="date" required>
         
         <label for="number">聚會人數</label>
         <input type="number" id="number" name="number" required>
         
         <button type="submit" class="submit-btn">提交</button>
+        <div class="confirmation-message" id="confirmationMessage">已收到</div>
     </form>
 
     <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
