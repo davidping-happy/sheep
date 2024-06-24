@@ -53,6 +53,8 @@ function sendNotification(group, date, number) {
     var iftttKey = 'cFlz_mW1pqFUQ35hSSnTDlD_KTdIoIgzwxx0KkL4VlH'; // Replace with your IFTTT Webhooks key
     var eventName = 'send_number'; // Replace with your IFTTT event name
 
+    console.log('Preparing to send notification to IFTTT');
+    
     fetch(`https://maker.ifttt.com/trigger/${eventName}/with/key/${iftttKey}`, {
         method: 'POST',
         headers: {
@@ -67,7 +69,7 @@ function sendNotification(group, date, number) {
         if (response.ok) {
             console.log('Notification sent successfully');
         } else {
-            console.error('Failed to send notification');
+            console.error('Failed to send notification', response.status, response.statusText);
         }
     }).catch(error => {
         console.error('Error sending notification:', error);
