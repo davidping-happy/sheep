@@ -51,7 +51,7 @@ function saveMeeting(group, date, number) {
 
 function sendNotification(group, date, number) {
     var iftttKey = 'cFlz_mW1pqFUQ35hSSnTDlD_KTdIoIgzwxx0KkL4VlH'; // Replace with your IFTTT Webhooks key
-    var eventName = 'send_sms'; // Replace with your IFTTT event name
+    var eventName = 'send_number'; // Replace with your IFTTT event name
 
     fetch(`https://maker.ifttt.com/trigger/${eventName}/with/key/${iftttKey}`, {
         method: 'POST',
