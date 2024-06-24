@@ -13,7 +13,6 @@ var firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 var database = firebase.database();
-const messaging = firebase.messaging();
 
 document.getElementById('meetingForm').addEventListener('submit', submitForm);
 
@@ -37,8 +36,8 @@ function submitForm(e) {
     // Clear form
     document.getElementById('meetingForm').reset();
 
-    // Send push notification
-    sendPushNotification(group, date, number);
+    // Send notification via IFTTT
+    sendNotification(group, date, number);
 }
 
 function saveMeeting(group, date, number) {
@@ -50,49 +49,27 @@ function saveMeeting(group, date, number) {
     });
 }
 
-function sendPushNotification(group, date, number) {
-    const payload = {
-        notification: {
-            title: 'New Meeting Submitted',
-            body: `Group: ${group}, Date: ${date}, Participants: ${number}`,
-            click_action: 'https://your-website.com'
-        }
-    };
+function sendNotification(group, date, number) {
+    var iftttKey = 'cFlz_mW1pqFUQ35hSSnTDlD_KTdIoIgzwxx0KkL4VlH'; // Replace with your IFTTT Webhooks key
+    var eventName = 'send_sms'; // Replace with your IFTTT event name
 
-    messaging.getToken({ vapidKey: 'YOUR_PUBLIC_VAPID_KEY' }).then((token) => {
-        fetch('https://fcm.googleapis.com/fcm/send', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `key=${firebaseConfig.messagingSenderId}`
-            },
-            body: JSON.stringify({
-                to: token,
-                notification: payload.notification
-            })
-        }).then(response => {
-            if (response.ok) {
-                console.log('Notification sent successfully');
-            } else {
-                console.error('Failed to send notification');
-            }
-        }).catch(error => {
-            console.error('Error sending notification:', error);
-        });
-    }).catch((err) => {
-        console.error('Error retrieving FCM token:', err);
+    fetch(`https://maker.ifttt.com/trigger/${eventName}/with/key/${iftttKey}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            value1: group,
+            value2: date,
+            value3: number
+        })
+    }).then(response => {
+        if (response.ok) {
+            console.log('Notification sent successfully');
+        } else {
+            console.error('Failed to send notification');
+        }
+    }).catch(error => {
+        console.error('Error sending notification:', error);
     });
 }
-
-// Request permission for notifications
-messaging.requestPermission()
-    .then(() => {
-        console.log('Notification permission granted.');
-        return messaging.getToken({ vapidKey: 'YOUR_PUBLIC_VAPID_KEY' });
-    })
-    .then((token) => {
-        console.log('FCM Token:', token);
-    })
-    .catch((err) => {
-        console.error('Unable to get permission to notify.', err);
-    });
