@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>成二小組聚會統計</title>
+    <title>Meeting Statistics</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -69,18 +69,18 @@
 <body>
 
     <form class="meeting-form" id="meetingForm">
-        <h2>成二小組聚會統計</h2>
-        <label for="group">小組名稱</label>
+        <h2>Meeting Statistics</h2>
+        <label for="group">Group Name</label>
         <input type="text" id="group" name="group" required>
         
-        <label for="date">聚會日期</label>
+        <label for="date">Meeting Date</label>
         <input type="date" id="date" name="date" required>
         
-        <label for="number">聚會人數</label>
+        <label for="number">Number of Attendees</label>
         <input type="number" id="number" name="number" required>
         
-        <button type="submit" class="submit-btn">提交</button>
-        <div class="confirmation-message" id="confirmationMessage">已收到</div>
+        <button type="submit" class="submit-btn">Submit</button>
+        <div class="confirmation-message" id="confirmationMessage">Form Received</div>
     </form>
 
     <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
@@ -125,7 +125,7 @@
             // Clear form
             document.getElementById('meetingForm').reset();
 
-            // Send notification via Pushover
+            // Send notification via IFTTT
             sendNotification(group, date, number);
         }
 
@@ -139,20 +139,22 @@
         }
 
         function sendNotification(group, date, number) {
-            fetch('https://your-vercel-deployment-url/api/submitForm', {
+            var eventName = 'meeting_notification'; // IFTTT Event Name
+            var iftttKey = 'cFlz_mW1pqFUQ35hSSnTDlD_KTdIoIgzwxx0KkL4VlH'; // Replace with your IFTTT Webhooks key
+
+            fetch(`https://maker.ifttt.com/trigger/${eventName}/with/key/${iftttKey}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    group: group,
-                    date: date,
-                    number: number
+                    value1: group,
+                    value2: date,
+                    value3: number
                 })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message === 'Form submitted and notification sent successfully') {
+            .then(response => {
+                if (response.ok) {
                     console.log('Notification sent successfully');
                 } else {
                     console.error('Failed to send notification');
