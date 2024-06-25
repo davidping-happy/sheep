@@ -139,7 +139,7 @@
         }
 
         function sendNotification(group, date, number) {
-            var eventName = 'meeting_notification'; // IFTTT Event Name
+            var eventName = 'service_notification'; // IFTTT Event Name
             var iftttKey = 'cFlz_mW1pqFUQ35hSSnTDlD_KTdIoIgzwxx0KkL4VlH'; // Replace with your IFTTT Webhooks key
 
             fetch(`https://maker.ifttt.com/trigger/${eventName}/with/key/${iftttKey}`, {
