@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PushAudience, Role } from '@prisma/client';
+import { PushAudience, Role } from '../../common/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthUser } from '../../auth/decorators/current-user.decorator';
 import { PushService } from './push.service';
@@ -48,7 +48,7 @@ export class AnnouncementsService {
     if (!ann) throw new NotFoundException();
 
     const count = await this.push.send(ann.title, ann.body, {
-      audience: ann.audience,
+      audience: ann.audience as PushAudience,
       pastoralAreaId: ann.pastoralAreaId,
       targetGroupId: ann.targetGroupId,
       targetRole: ann.targetRole,

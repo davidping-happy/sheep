@@ -28,7 +28,8 @@ export class AuditService {
         action: entry.action,
         targetType: entry.targetType,
         targetId: entry.targetId ?? null,
-        metadata: (entry.metadata ?? {}) as object,
+        // metadata 以 JSON 字串儲存（DB 無關；正式 Postgres 可改回 Json 型別）
+        metadata: JSON.stringify(entry.metadata ?? {}),
         ip: entry.ip ?? null,
       },
     });

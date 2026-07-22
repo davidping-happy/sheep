@@ -5,7 +5,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as argon2 from 'argon2';
+// 純 JS bcrypt（避免 Windows 原生編譯問題）。正式環境亦可改用 argon2。
+import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../common/audit/audit.service';
@@ -38,7 +39,7 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
-        passwordHash: await argon2.hash(dto.password),
+        passwordHash: await bcrypt.hash(dto.password, 12),
         displayName: dto.displayName,
         isMinor: dto.isMinor ?? false,
         guardianName: dto.guardianName,
@@ -55,7 +56,7 @@ export class AuthService {
     });
     // 帳號枚舉防護：不論帳號是否存在都做一次雜湊比對成本 (§四.7)
     const ok =
-      user && (await argon2.verify(user.passwordHash, dto.password));
+      user && (await bcrypt.compare(dto.password, user.passwordHash));
     if (!user || !ok || !user.isActive) {
       throw new UnauthorizedException('帳號或密碼錯誤');
     }

@@ -5,18 +5,9 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from '@prisma/client';
+import { Role, ROLE_RANK } from '../../common/enums';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { AuthUser } from '../decorators/current-user.decorator';
-
-// 角色階層（數字越大權限越高）。與 @churchsheep/shared 的 ROLE_RANK 對齊，
-// 於此以 Prisma Role 為鍵，避免跨套件列舉型別耦合。
-const ROLE_RANK: Record<Role, number> = {
-  [Role.MEMBER]: 0,
-  [Role.GROUP_LEADER]: 1,
-  [Role.STAFF]: 2,
-  [Role.ADMIN]: 3,
-};
 
 /**
  * 階層式 RBAC 守衛（§四.9 最小權限）。

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ArticleCategory } from '@prisma/client';
+import { ArticleCategory } from '../../common/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 
 interface ArticleInput {

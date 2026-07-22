@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Visibility } from '@prisma/client';
+import { Visibility } from '../../common/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FieldEncryptionService } from '../../common/crypto/field-encryption.service';
 import { CreateDevotionDto, UpdateDevotionDto } from './dto/devotion.dto';

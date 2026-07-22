@@ -62,12 +62,13 @@ churchsheep/
 # 1. 安裝相依套件（root workspaces）
 npm install
 
-# 2. 後端 API：設定環境變數與資料庫
+# 2. 後端 API（本地 demo：SQLite，零外部依賴）
 cd apps/api
-cp .env.example .env          # 填入 DATABASE_URL、JWT 密鑰、YouTube API key 等
-npm run prisma:generate
-npm run prisma:migrate        # 建立資料表
-npm run start:dev             # http://localhost:3000  (Swagger: /docs)
+cp .env.example .env          # 已預設 SQLite；正式環境改 Postgres（見 apps/api/README.md）
+npm install --no-workspaces
+npm run prisma:generate && npm run prisma:push && npm run seed
+npm run build && node dist/main.js   # http://localhost:3000/api  (Swagger: /docs)
+node demo/demo.mjs            # 一鍵驗證 auth + 代禱牆審核（17 項，全數通過）
 
 # 3. 管理後台
 cd ../admin-web && cp .env.example .env.local && npm run dev   # http://localhost:3001

@@ -1,4 +1,4 @@
-import { Visibility } from '@prisma/client';
+import { Visibility } from '../../../common/enums';
 import {
   IsDateString,
   IsEnum,

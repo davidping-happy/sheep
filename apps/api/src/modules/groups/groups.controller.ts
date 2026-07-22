@@ -7,7 +7,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { Role } from '../../common/enums';
 import {
   IsBoolean,
   IsOptional,

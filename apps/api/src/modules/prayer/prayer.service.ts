@@ -8,7 +8,7 @@ import {
   ModerationStatus,
   Role,
   Visibility,
-} from '@prisma/client';
+} from '../../common/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FieldEncryptionService } from '../../common/crypto/field-encryption.service';
 import { AuditService } from '../../common/audit/audit.service';

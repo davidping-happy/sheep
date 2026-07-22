@@ -1,4 +1,4 @@
-import { SensitiveCategory } from '@prisma/client';
+import { SensitiveCategory } from '../../common/enums';
 
 /**
  * 敏感內容偵測（§6.2 特別敏感情境 / 選項二 自動內容過濾）。

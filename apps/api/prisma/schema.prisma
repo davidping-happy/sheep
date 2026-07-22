@@ -1,25 +1,29 @@
-// 教會 APP 資料模型 (PostgreSQL)
+// 教會 APP 資料模型
 // 對應系統設計文件 §三.4 資料層 / §四 資安規則。
-// 敏感欄位（晨禱筆記內容、代禱匿名對應）於「應用層」加密後存入，
-// 且高敏感關聯獨立成表 (PrayerAnonymityMap) 以套用更嚴格的存取控制。
+//
+// ── 資料庫切換 ──────────────────────────────────────────────
+// 本地 demo：SQLite（零外部依賴，見下方 provider = "sqlite"）。
+// 正式環境（設計文件要求 PostgreSQL）：只需
+//   1) provider 改為 "postgresql"
+//   2) .env 的 DATABASE_URL 改為 postgres 連線字串
+// 列舉一律以字串欄位儲存 + 應用層 class-validator/共用列舉驗證，
+// 使資料模型與 DB 廠商無關、且新增列舉值不需 migration。
+// ───────────────────────────────────────────────────────────
+//
+// 敏感欄位（晨禱筆記內容、代禱匿名對應）於「應用層」AES-256 加密後存入，
+// 高敏感關聯獨立成表 (PrayerAnonymityMap) 以套用更嚴格的存取控制。
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 // ─────────────────────────── 帳號 / RBAC ───────────────────────────
-
-enum Role {
-  MEMBER
-  GROUP_LEADER
-  STAFF
-  ADMIN
-}
+// role 值：MEMBER | GROUP_LEADER | STAFF | ADMIN（見 src/common/enums.ts）
 
 model User {
   id            String   @id @default(uuid())
@@ -29,7 +33,7 @@ model User {
   displayName   String
   phone         String?
   avatarUrl     String?
-  role          Role     @default(MEMBER)
+  role          String   @default("MEMBER")
   isMinor       Boolean  @default(false) // 未成年，觸發監護人同意/資訊揭露限制
   guardianName  String?
   guardianPhone String?
@@ -72,15 +76,16 @@ model RefreshToken {
 
 // ─────────────────────── 1. 晨禱靈修筆記 ───────────────────────
 // 個人資料，需嚴格權限隔離；contentEncrypted 為 AES-256 應用層加密密文 (§四.1)。
+// visibility 值：PRIVATE | GROUP | PUBLIC（預設 PRIVATE）
 
 model DevotionNote {
   id              String     @id @default(uuid())
   author          User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId        String
-  noteDate        DateTime   @db.Date
+  noteDate        DateTime
   scriptureRef    String?    // 經文出處
   contentEncrypted String    // 加密後密文，資料庫層不可讀
-  visibility      Visibility @default(PRIVATE)
+  visibility      String     @default("PRIVATE")
   sharedGroupId   String?    // 若 visibility=GROUP，分享到的小組
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -90,27 +95,21 @@ model DevotionNote {
 }
 
 // ─────────────────────── 3. 靈修佳文分享 (CMS) ───────────────────────
-
-enum ArticleCategory {
-  DAILY_BREAD
-  PASTOR_COLUMN
-  TESTIMONY
-  OTHER
-}
+// category 值：DAILY_BREAD | PASTOR_COLUMN | TESTIMONY | OTHER
 
 model Article {
-  id          String          @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
-  slug        String          @unique
-  category    ArticleCategory @default(DAILY_BREAD)
+  slug        String    @unique
+  category    String    @default("DAILY_BREAD")
   coverUrl    String?
-  body        String          // 支援 Markdown/富文本
-  author      User            @relation("ArticleAuthor", fields: [authorId], references: [id])
+  body        String    // 支援 Markdown/富文本
+  author      User      @relation("ArticleAuthor", fields: [authorId], references: [id])
   authorId    String
-  isPublished Boolean         @default(false)
+  isPublished Boolean   @default(false)
   publishedAt DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([category, isPublished])
   @@map("articles")
@@ -163,6 +162,8 @@ model GroupMember {
 }
 
 // ─────────────────────── 6. 活動報名與簽到 ───────────────────────
+// status 值：REGISTERED | WAITLISTED | CANCELLED
+// method 值：DYNAMIC_QR | MEMBER_BARCODE | MANUAL
 
 model Event {
   id              String    @id @default(uuid())
@@ -187,15 +188,15 @@ model Event {
 }
 
 model EventRegistration {
-  id            String             @id @default(uuid())
-  event         Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId       String
-  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String
-  status        RegistrationStatus @default(REGISTERED)
-  guardianConsent Boolean          @default(false)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  status        String   @default("REGISTERED")
+  guardianConsent Boolean @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([eventId, userId])
   @@index([eventId, status])
@@ -216,13 +217,13 @@ model CheckinToken {
 }
 
 model EventCheckin {
-  id        String        @id @default(uuid())
-  event     Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId   String
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
-  method    CheckinMethod @default(DYNAMIC_QR)
-  checkedInAt DateTime    @default(now())
+  method    String   @default("DYNAMIC_QR")
+  checkedInAt DateTime @default(now())
 
   @@unique([eventId, userId])
   @@map("event_checkins")
@@ -230,27 +231,30 @@ model EventCheckin {
 
 // ─────────────────────── 7. 禱告代禱牆 ───────────────────────
 // 高敏感 UGC。預設 PRIVATE、審核佇列、匿名可追溯（分表加密）、敏感情境通報。
+// visibility 值：PRIVATE | GROUP | PUBLIC
+// moderationStatus 值：PENDING | APPROVED | REJECTED | AUTO_FLAGGED
+// sensitiveCategory 值：NONE | SELF_HARM | DOMESTIC_VIOLENCE | MENTAL_HEALTH_CRISIS | INVOLVES_THIRD_PARTY | INVOLVES_MINOR
 
 model PrayerRequest {
-  id              String           @id @default(uuid())
-  author          User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id              String   @id @default(uuid())
+  author          User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId        String
   // 內容依可見範圍決定是否加密儲存；PRIVATE 建議加密 (§四.1)
   content         String
-  visibility      Visibility       @default(PRIVATE)
+  visibility      String   @default("PRIVATE")
   sharedGroupId   String?
-  isAnonymous     Boolean          @default(false) // 顯示為「一位弟兄姊妹」
-  moderationStatus ModerationStatus @default(PENDING)
-  sensitiveCategory SensitiveCategory @default(NONE)
+  isAnonymous     Boolean  @default(false) // 顯示為「一位弟兄姊妹」
+  moderationStatus String  @default("PENDING")
+  sensitiveCategory String @default("NONE")
   // 敏感情境（自傷/家暴等）：優先通報牧者，escalated=true 代表已進入關懷流程
-  escalated       Boolean          @default(false)
-  reportCount     Int              @default(0)
+  escalated       Boolean  @default(false)
+  reportCount     Int      @default(0)
   // 資料保存期限：到期自動封存不再公開 (§6.2 延伸)
   archiveAt       DateTime?
   archivedAt      DateTime?
   takenDownAt     DateTime?        // 發文者自行下架
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   responses PrayerResponse[]
   reports   PrayerReport[]
@@ -300,16 +304,17 @@ model PrayerReport {
 }
 
 // ─────────────────────── 5. 公告 / 推播 ───────────────────────
+// audience 值：ALL | PASTORAL_AREA | GROUP | ROLE
 
 model Announcement {
   id             String        @id @default(uuid())
   title          String
   body           String
-  audience       PushAudience  @default(ALL)
+  audience       String        @default("ALL")
   pastoralArea   PastoralArea? @relation(fields: [pastoralAreaId], references: [id])
   pastoralAreaId String?
   targetGroupId  String?
-  targetRole     Role?
+  targetRole     String?
   isPublished    Boolean       @default(false)
   publishedAt    DateTime?
   pushSentAt     DateTime?     // 已透過 FCM/LINE 發送時間
@@ -337,6 +342,7 @@ model Device {
 
 // ─────────────────────── 稽核紀錄 (§四.9) ───────────────────────
 // 誰在何時對什麼做了什麼；存取匿名對應/出席名單等敏感操作必留紀錄。
+// metadata 以 JSON 字串儲存（正式 Postgres 可改回 Json 型別）。
 
 model AuditLog {
   id         String   @id @default(uuid())
@@ -345,54 +351,11 @@ model AuditLog {
   action     String   // e.g. PRAYER_ANONYMITY_REVEAL, EVENT_ROSTER_VIEW
   targetType String
   targetId   String?
-  metadata   Json?
+  metadata   String?  // JSON 字串
   ip         String?
   createdAt  DateTime @default(now())
 
   @@index([action, createdAt])
   @@index([actorId])
   @@map("audit_logs")
-}
-
-// ─────────────────────── 共用列舉 ───────────────────────
-
-enum Visibility {
-  PRIVATE
-  GROUP
-  PUBLIC
-}
-
-enum ModerationStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  AUTO_FLAGGED
-}
-
-enum RegistrationStatus {
-  REGISTERED
-  WAITLISTED
-  CANCELLED
-}
-
-enum CheckinMethod {
-  DYNAMIC_QR
-  MEMBER_BARCODE
-  MANUAL
-}
-
-enum PushAudience {
-  ALL
-  PASTORAL_AREA
-  GROUP
-  ROLE
-}
-
-enum SensitiveCategory {
-  NONE
-  SELF_HARM
-  DOMESTIC_VIOLENCE
-  MENTAL_HEALTH_CRISIS
-  INVOLVES_THIRD_PARTY
-  INVOLVES_MINOR
 }

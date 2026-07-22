@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma, PushAudience } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { PushAudience } from '../../common/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface PushTarget {

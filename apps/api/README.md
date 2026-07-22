@@ -2,18 +2,41 @@
 
 核心服務層。模組化單體，日後可依流量拆微服務（系統設計文件 §三.3）。
 
-## 執行
+## 執行（本地 demo：SQLite，零外部依賴）
 
 ```bash
-cp .env.example .env      # 填 DATABASE_URL、JWT 密鑰、FIELD_ENCRYPTION_KEY 等
-npm install               # 於 monorepo root 執行 npm install 亦可
+cp .env.example .env          # 已預設 SQLite；正式環境改 DATABASE_URL + provider=postgresql
+npm install --no-workspaces   # 於此資料夾安裝
 npm run prisma:generate
-npm run prisma:migrate    # 建表
-npm run seed              # 建立初始管理員與範例牧區（選用）
-npm run start:dev         # http://localhost:3000/api  (Swagger: /docs)
+npm run prisma:push           # 建立 SQLite dev.db（demo 用；正式改 prisma:migrate）
+npm run seed                  # 建立初始管理員 admin@church.local / ChangeMe123456 與範例牧區
+npm run build && node dist/main.js   # http://localhost:3000/api  (Swagger: /docs)
 ```
 
-產生欄位加密金鑰：`openssl rand -hex 32` → 填入 `FIELD_ENCRYPTION_KEY`。
+> Windows 若 `npx` 解析異常，可直接呼叫 `.\node_modules\.bin\nest.cmd build`。
+
+### 一鍵驗證 auth + 代禱牆審核流程
+
+伺服器啟動後另開終端機：
+
+```bash
+node demo/demo.mjs
+```
+
+會依序驗證 17 項：註冊/登入、未授權 401、越權 403、公開代禱需審核、
+核准後可見、匿名顯示「一位弟兄姊妹」、僅 ADMIN 可稽核揭露真實身份、
+危機內容自動標記且不公開、發文者自行下架。
+
+產生欄位加密金鑰（正式環境）：`openssl rand -hex 32` → 填入 `FIELD_ENCRYPTION_KEY`。
+
+### 資料庫切換（正式環境 PostgreSQL）
+
+1. `prisma/schema.prisma` 的 `datasource db` provider 改為 `"postgresql"`
+2. `.env` 的 `DATABASE_URL` 改為 postgres 連線字串
+3. `npm run prisma:migrate`
+
+列舉以字串欄位儲存 + 應用層 `class-validator`/`src/common/enums.ts` 驗證，
+故資料模型與 DB 廠商無關，切換不需改動業務程式碼。
 
 ## 端點總覽
 
@@ -38,7 +61,7 @@ npm run start:dev         # http://localhost:3000/api  (Swagger: /docs)
 | 需求 | 實作位置 |
 |---|---|
 | 敏感欄位加密 (STORAGE) | `common/crypto/field-encryption.service.ts`（AES-256-GCM）|
-| 密碼雜湊 (CRYPTO) | `auth.service.ts` argon2 |
+| 密碼雜湊 (CRYPTO) | `auth.service.ts` bcryptjs（純 JS；正式可改 argon2）|
 | 短效 token + refresh + 撤銷 (AUTH) | `auth.service.ts` / `RefreshToken` |
 | 速率限制 (NETWORK) | `app.module.ts` ThrottlerGuard |
 | 安全標頭 / CORS 白名單 (PLATFORM) | `main.ts` helmet + enableCors |

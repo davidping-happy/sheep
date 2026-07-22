@@ -8,7 +8,7 @@ import {
   CheckinMethod,
   RegistrationStatus,
   Role,
-} from '@prisma/client';
+} from '../../common/enums';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';

@@ -1,5 +1,6 @@
-import { PrismaClient, Role } from '@prisma/client';
-import * as argon2 from 'argon2';
+import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
+import { Role } from '../src/common/enums';
 
 const prisma = new PrismaClient();
 
@@ -11,7 +12,7 @@ async function main() {
     update: {},
     create: {
       email: adminEmail,
-      passwordHash: await argon2.hash('ChangeMe123456'),
+      passwordHash: await bcrypt.hash('ChangeMe123456', 12),
       displayName: '系統管理員',
       role: Role.ADMIN,
       consentAt: new Date(),

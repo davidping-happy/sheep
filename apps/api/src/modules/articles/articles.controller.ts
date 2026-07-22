@@ -8,7 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { ArticleCategory, Role } from '@prisma/client';
+import { ArticleCategory, Role } from '../../common/enums';
 import {
   IsBoolean,
   IsEnum,
