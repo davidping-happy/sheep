@@ -1,0 +1,66 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ArticleCategory, Role } from '@prisma/client';
+import {
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import {
+  AuthUser,
+  CurrentUser,
+} from '../../auth/decorators/current-user.decorator';
+import { Public } from '../../auth/decorators/public.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { ArticlesService } from './articles.service';
+
+class UpsertArticleDto {
+  @IsString() title!: string;
+  @IsString() slug!: string;
+  @IsString() body!: string;
+  @IsOptional() @IsEnum(ArticleCategory) category?: ArticleCategory;
+  @IsOptional() @IsString() coverUrl?: string;
+  @IsOptional() @IsBoolean() isPublished?: boolean;
+}
+
+/** 3. 靈修佳文分享（CMS 上稿，§二.3） */
+@ApiTags('articles')
+@Controller('articles')
+export class ArticlesController {
+  constructor(private readonly service: ArticlesService) {}
+
+  @Public()
+  @Get()
+  list(@Query('category') category?: ArticleCategory) {
+    return this.service.listPublished(category);
+  }
+
+  @Public()
+  @Get(':slug')
+  get(@Param('slug') slug: string) {
+    return this.service.getBySlug(slug);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Post()
+  create(@CurrentUser() user: AuthUser, @Body() dto: UpsertArticleDto) {
+    return this.service.create(user.id, dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: Partial<UpsertArticleDto>) {
+    return this.service.update(id, dto);
+  }
+}

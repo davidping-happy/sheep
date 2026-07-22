@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "教會 APP",
+    "slug": "churchsheep",
+    "version": "1.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "churchsheep",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "org.church.churchsheep"
+    },
+    "android": {
+      "package": "org.church.churchsheep"
+    },
+    "extra": {
+      "apiBase": "http://localhost:3000/api"
+    }
+  }
+}

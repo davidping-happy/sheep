@@ -1,0 +1,398 @@
+// 教會 APP 資料模型 (PostgreSQL)
+// 對應系統設計文件 §三.4 資料層 / §四 資安規則。
+// 敏感欄位（晨禱筆記內容、代禱匿名對應）於「應用層」加密後存入，
+// 且高敏感關聯獨立成表 (PrayerAnonymityMap) 以套用更嚴格的存取控制。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── 帳號 / RBAC ───────────────────────────
+
+enum Role {
+  MEMBER
+  GROUP_LEADER
+  STAFF
+  ADMIN
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  // bcrypt/argon2 雜湊，不存明文 (§四.2)
+  passwordHash  String
+  displayName   String
+  phone         String?
+  avatarUrl     String?
+  role          Role     @default(MEMBER)
+  isMinor       Boolean  @default(false) // 未成年，觸發監護人同意/資訊揭露限制
+  guardianName  String?
+  guardianPhone String?
+  // 後台帳號 2FA (§四.3)
+  totpSecret    String?
+  twoFactorEnabled Boolean @default(false)
+  isActive      Boolean  @default(true)
+  consentAt     DateTime? // 個資告知同意時間 (§四.8 告知義務)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  ledGroups          SmallGroup[]       @relation("GroupLeader")
+  memberships        GroupMember[]
+  devotionNotes      DevotionNote[]
+  articles           Article[]          @relation("ArticleAuthor")
+  eventRegistrations EventRegistration[]
+  eventCheckins      EventCheckin[]
+  prayerRequests     PrayerRequest[]
+  prayerResponses    PrayerResponse[]
+  devices            Device[]
+  refreshTokens      RefreshToken[]
+  auditLogs          AuditLog[]
+
+  @@map("users")
+}
+
+// Refresh token 家族，登出/撤銷用 (§四.3)
+model RefreshToken {
+  id         String    @id @default(uuid())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ─────────────────────── 1. 晨禱靈修筆記 ───────────────────────
+// 個人資料，需嚴格權限隔離；contentEncrypted 為 AES-256 應用層加密密文 (§四.1)。
+
+model DevotionNote {
+  id              String     @id @default(uuid())
+  author          User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId        String
+  noteDate        DateTime   @db.Date
+  scriptureRef    String?    // 經文出處
+  contentEncrypted String    // 加密後密文，資料庫層不可讀
+  visibility      Visibility @default(PRIVATE)
+  sharedGroupId   String?    // 若 visibility=GROUP，分享到的小組
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([authorId, noteDate])
+  @@map("devotion_notes")
+}
+
+// ─────────────────────── 3. 靈修佳文分享 (CMS) ───────────────────────
+
+enum ArticleCategory {
+  DAILY_BREAD
+  PASTOR_COLUMN
+  TESTIMONY
+  OTHER
+}
+
+model Article {
+  id          String          @id @default(uuid())
+  title       String
+  slug        String          @unique
+  category    ArticleCategory @default(DAILY_BREAD)
+  coverUrl    String?
+  body        String          // 支援 Markdown/富文本
+  author      User            @relation("ArticleAuthor", fields: [authorId], references: [id])
+  authorId    String
+  isPublished Boolean         @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([category, isPublished])
+  @@map("articles")
+}
+
+// ─────────────────────── 4. 牧區・小組 ───────────────────────
+
+model PastoralArea {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime     @default(now())
+  groups      SmallGroup[]
+  announcements Announcement[]
+
+  @@map("pastoral_areas")
+}
+
+model SmallGroup {
+  id             String       @id @default(uuid())
+  pastoralArea   PastoralArea @relation(fields: [pastoralAreaId], references: [id])
+  pastoralAreaId String
+  name           String
+  intro          String?
+  photoUrl       String?
+  meetingTime    String?      // 聚會時間（文字描述）
+  meetingPlace   String?
+  // 聯絡資訊揭露需當事人同意 (§四.8 蒐集最小化)
+  contactVisible Boolean      @default(false)
+  leader         User?        @relation("GroupLeader", fields: [leaderId], references: [id])
+  leaderId       String?
+  members        GroupMember[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([pastoralAreaId])
+  @@map("small_groups")
+}
+
+model GroupMember {
+  id        String     @id @default(uuid())
+  group     SmallGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId   String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  joinedAt  DateTime   @default(now())
+
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+// ─────────────────────── 6. 活動報名與簽到 ───────────────────────
+
+model Event {
+  id              String    @id @default(uuid())
+  title           String
+  description     String?
+  location        String?
+  startAt         DateTime
+  endAt           DateTime?
+  capacity        Int?      // 名額上限，null=不限
+  registerDeadline DateTime?
+  requiresGuardianConsent Boolean @default(false) // 兒少活動
+  createdBy       String    // 主辦同工 userId（名單存取控制依據）
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  registrations EventRegistration[]
+  checkins      EventCheckin[]
+  qrTokens      CheckinToken[]
+
+  @@index([startAt])
+  @@map("events")
+}
+
+model EventRegistration {
+  id            String             @id @default(uuid())
+  event         Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId       String
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  status        RegistrationStatus @default(REGISTERED)
+  guardianConsent Boolean          @default(false)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([eventId, status])
+  @@map("event_registrations")
+}
+
+// 短效期動態簽到 Token (§6.1)，每 30 秒輪替；避免截圖重用
+model CheckinToken {
+  id        String   @id @default(uuid())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId   String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([eventId, expiresAt])
+  @@map("checkin_tokens")
+}
+
+model EventCheckin {
+  id        String        @id @default(uuid())
+  event     Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId   String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  method    CheckinMethod @default(DYNAMIC_QR)
+  checkedInAt DateTime    @default(now())
+
+  @@unique([eventId, userId])
+  @@map("event_checkins")
+}
+
+// ─────────────────────── 7. 禱告代禱牆 ───────────────────────
+// 高敏感 UGC。預設 PRIVATE、審核佇列、匿名可追溯（分表加密）、敏感情境通報。
+
+model PrayerRequest {
+  id              String           @id @default(uuid())
+  author          User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId        String
+  // 內容依可見範圍決定是否加密儲存；PRIVATE 建議加密 (§四.1)
+  content         String
+  visibility      Visibility       @default(PRIVATE)
+  sharedGroupId   String?
+  isAnonymous     Boolean          @default(false) // 顯示為「一位弟兄姊妹」
+  moderationStatus ModerationStatus @default(PENDING)
+  sensitiveCategory SensitiveCategory @default(NONE)
+  // 敏感情境（自傷/家暴等）：優先通報牧者，escalated=true 代表已進入關懷流程
+  escalated       Boolean          @default(false)
+  reportCount     Int              @default(0)
+  // 資料保存期限：到期自動封存不再公開 (§6.2 延伸)
+  archiveAt       DateTime?
+  archivedAt      DateTime?
+  takenDownAt     DateTime?        // 發文者自行下架
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  responses PrayerResponse[]
+  reports   PrayerReport[]
+  anonymity PrayerAnonymityMap?
+
+  @@index([moderationStatus, visibility])
+  @@index([authorId])
+  @@map("prayer_requests")
+}
+
+// 匿名貼文 ↔ 真實身份對應：獨立分表、應用層加密、存取權限最嚴格 (§6.2 資料設計)
+// 僅供濫用稽核，存取須寫入 AuditLog。
+model PrayerAnonymityMap {
+  id               String        @id @default(uuid())
+  prayerRequest    PrayerRequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade)
+  prayerRequestId  String        @unique
+  // 真實身份以密文儲存（不用外鍵，避免 JOIN 洩漏）
+  realUserIdEncrypted String
+  createdAt        DateTime      @default(now())
+
+  @@map("prayer_anonymity_map")
+}
+
+model PrayerResponse {
+  id              String        @id @default(uuid())
+  prayerRequest   PrayerRequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade)
+  prayerRequestId String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  showIdentity    Boolean       @default(false) // 是否顯示代禱者身份
+  createdAt       DateTime      @default(now())
+
+  @@unique([prayerRequestId, userId])
+  @@map("prayer_responses")
+}
+
+model PrayerReport {
+  id              String        @id @default(uuid())
+  prayerRequest   PrayerRequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade)
+  prayerRequestId String
+  reporterId      String
+  reason          String?
+  resolved        Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+
+  @@map("prayer_reports")
+}
+
+// ─────────────────────── 5. 公告 / 推播 ───────────────────────
+
+model Announcement {
+  id             String        @id @default(uuid())
+  title          String
+  body           String
+  audience       PushAudience  @default(ALL)
+  pastoralArea   PastoralArea? @relation(fields: [pastoralAreaId], references: [id])
+  pastoralAreaId String?
+  targetGroupId  String?
+  targetRole     Role?
+  isPublished    Boolean       @default(false)
+  publishedAt    DateTime?
+  pushSentAt     DateTime?     // 已透過 FCM/LINE 發送時間
+  createdBy      String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([audience, isPublished])
+  @@map("announcements")
+}
+
+// 推播裝置註冊 (FCM token)。裝置端 token 不落地明文 log (§四.1)
+model Device {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  fcmToken   String   @unique
+  platform   String   // ios | android
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@map("devices")
+}
+
+// ─────────────────────── 稽核紀錄 (§四.9) ───────────────────────
+// 誰在何時對什麼做了什麼；存取匿名對應/出席名單等敏感操作必留紀錄。
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actor      User?    @relation(fields: [actorId], references: [id])
+  actorId    String?
+  action     String   // e.g. PRAYER_ANONYMITY_REVEAL, EVENT_ROSTER_VIEW
+  targetType String
+  targetId   String?
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([actorId])
+  @@map("audit_logs")
+}
+
+// ─────────────────────── 共用列舉 ───────────────────────
+
+enum Visibility {
+  PRIVATE
+  GROUP
+  PUBLIC
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  AUTO_FLAGGED
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  WAITLISTED
+  CANCELLED
+}
+
+enum CheckinMethod {
+  DYNAMIC_QR
+  MEMBER_BARCODE
+  MANUAL
+}
+
+enum PushAudience {
+  ALL
+  PASTORAL_AREA
+  GROUP
+  ROLE
+}
+
+enum SensitiveCategory {
+  NONE
+  SELF_HARM
+  DOMESTIC_VIOLENCE
+  MENTAL_HEALTH_CRISIS
+  INVOLVES_THIRD_PARTY
+  INVOLVES_MINOR
+}
