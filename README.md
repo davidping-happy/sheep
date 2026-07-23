@@ -58,27 +58,50 @@ churchsheep/
 
 ## 快速開始
 
+### 第一次建置（裝套件 + 資料庫 + 編譯）
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-all.ps1
+```
+
+### 日常開發／重開機後啟動
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1
+```
+
+然後開啟：
+- 後台審核：http://localhost:3001/prayer（`admin@church.local` / `ChangeMe123456`）
+- API 文件：http://localhost:3000/docs
+
+停止本機服務：`.\scripts\stop-dev.ps1`
+
+### 手動分步（等同 setup-all，方便理解每一步）
+
 ```bash
-# 1. 安裝相依套件（root workspaces）
-npm install
-
-# 2. 後端 API（本地 demo：SQLite，零外部依賴）
+# ── 後端 API ──
 cd apps/api
-cp .env.example .env          # 已預設 SQLite；正式環境改 Postgres（見 apps/api/README.md）
+cp .env.example .env          # 密鑰與資料庫路徑（不進 git）
+npm install --no-workspaces   # 下載 NestJS / Prisma 等
+npm run prisma:generate       # 產生資料庫客戶端程式碼
+npm run prisma:push           # 建立 SQLite 資料表（本地 demo）
+npm run seed                  # 建立管理員與範例牧區
+npm run build && node dist/main.js
+
+# 驗證
+node demo/demo.mjs
+node demo/demo-events.mjs
+
+# ── 管理後台 ──
+cd ../admin-web
+cp .env.example .env.local
 npm install --no-workspaces
-npm run prisma:generate && npm run prisma:push && npm run seed
-npm run build && node dist/main.js   # http://localhost:3000/api  (Swagger: /docs)
-node demo/demo.mjs            # 一鍵驗證 auth + 代禱牆審核（17 項）
-node demo/demo-events.mjs     # 活動報名 + 動態 QR 簽到（16 項）
-node demo/demo-admin-prayer.mjs  # 模擬後台審核佇列核准/退回
+npm run dev                   # http://localhost:3001/prayer
 
-# 3. 管理後台（代禱牆審核佇列可實際登入、核准/退回）
-cd ../admin-web && npm install --no-workspaces
-cp .env.example .env.local     # NEXT_PUBLIC_API_BASE 預設 http://localhost:3000/api
-npm run dev                    # http://localhost:3001/prayer  → admin@church.local / ChangeMe123456
-
-# 4. 行動端
-cd ../mobile && npm install && npm run start
+# ── 行動端（會友 App 骨架）──
+cd ../mobile
+npm install --no-workspaces
+npm start                     # Expo；手機裝 Expo Go 掃碼
 ```
 
 ## 開發階段（對應設計文件第六章）
