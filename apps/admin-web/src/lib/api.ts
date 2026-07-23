@@ -1,9 +1,18 @@
-const API_BASE =
+export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:3000/api';
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 
 /**
  * 後台 API 呼叫封裝。
- * access token 存於記憶體/HttpOnly cookie（勿存 localStorage 以降低 XSS 風險）。
+ * access token 建議存於記憶體/HttpOnly cookie（勿存 localStorage 以降低 XSS 風險）。
  */
 export async function apiFetch<T>(
   path: string,
@@ -18,8 +27,15 @@ export async function apiFetch<T>(
       ...headers,
     },
   });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
   if (!res.ok) {
-    throw new Error(`API ${res.status}: ${await res.text()}`);
+    const message = data?.message
+      ? Array.isArray(data.message)
+        ? data.message.join(', ')
+        : data.message
+      : `API ${res.status}`;
+    throw new ApiError(res.status, message);
   }
-  return res.json() as Promise<T>;
+  return data as T;
 }

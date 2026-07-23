@@ -15,7 +15,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
-    "demo": "ts-node prisma/seed.ts"
+    "demo": "node demo/demo.mjs",
+    "demo:events": "node demo/demo-events.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

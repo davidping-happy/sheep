@@ -70,8 +70,10 @@ npm run prisma:generate && npm run prisma:push && npm run seed
 npm run build && node dist/main.js   # http://localhost:3000/api  (Swagger: /docs)
 node demo/demo.mjs            # 一鍵驗證 auth + 代禱牆審核（17 項，全數通過）
 
-# 3. 管理後台
-cd ../admin-web && cp .env.example .env.local && npm run dev   # http://localhost:3001
+# 3. 管理後台（代禱牆審核佇列可實際登入、核准/退回）
+cd ../admin-web && npm install --no-workspaces
+cp .env.example .env.local     # NEXT_PUBLIC_API_BASE 預設 http://localhost:3000/api
+npm run dev                    # http://localhost:3001 → /prayer 登入 admin@church.local / ChangeMe123456
 
 # 4. 行動端
 cd ../mobile && npm install && npm run start
