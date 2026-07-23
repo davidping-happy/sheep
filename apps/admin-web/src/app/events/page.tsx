@@ -1,18 +1,400 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { apiFetch, ApiError } from '../../lib/api';
+import { AdminLoginForm, useAdminAuth } from '../../lib/useAdminAuth';
+
+interface EventItem {
+  id: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  startAt: string;
+  capacity: number | null;
+  registerDeadline: string | null;
+  requiresGuardianConsent: boolean;
+  createdBy: string;
+}
+
+interface RosterRow {
+  id: string;
+  status: string;
+  guardianConsent: boolean;
+  user: { id: string; displayName: string; phone: string | null };
+}
+
+interface CheckinTokenResult {
+  token: string;
+  expiresAt: string;
+  ttlSeconds: number;
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  REGISTERED: '已報名',
+  WAITLISTED: '候補',
+  CANCELLED: '已取消',
+};
+
+function toLocalInputValue(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function EventsPage() {
+  const auth = useAdminAuth();
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [roster, setRoster] = useState<RosterRow[]>([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
+  const [qr, setQr] = useState<CheckinTokenResult | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  // 建立活動表單
+  const [title, setTitle] = useState('');
+  const [location, setLocation] = useState('');
+  const [startAt, setStartAt] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    d.setMinutes(0, 0, 0);
+    return toLocalInputValue(d);
+  });
+  const [capacity, setCapacity] = useState('30');
+  const [requiresGuardian, setRequiresGuardian] = useState(false);
+
+  const loadEvents = useCallback(async (jwt: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await apiFetch<EventItem[]>('/events', { token: jwt });
+      setEvents(data);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '載入活動失敗');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (auth.token) loadEvents(auth.token);
+  }, [auth.token, loadEvents]);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!auth.token || !title.trim()) return;
+    setCreating(true);
+    setError('');
+    try {
+      await apiFetch<EventItem>('/events', {
+        method: 'POST',
+        token: auth.token,
+        body: JSON.stringify({
+          title: title.trim(),
+          location: location.trim() || undefined,
+          startAt: new Date(startAt).toISOString(),
+          capacity: capacity ? parseInt(capacity, 10) : undefined,
+          requiresGuardianConsent: requiresGuardian,
+        }),
+      });
+      setTitle('');
+      setLocation('');
+      await loadEvents(auth.token);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '建立失敗');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function openRoster(eventId: string) {
+    if (!auth.token) return;
+    setSelectedId(eventId);
+    setQr(null);
+    setRosterLoading(true);
+    setError('');
+    try {
+      const data = await apiFetch<RosterRow[]>(`/events/${eventId}/roster`, {
+        token: auth.token,
+      });
+      setRoster(data);
+    } catch (e) {
+      setRoster([]);
+      setError(
+        e instanceof ApiError
+          ? e.message
+          : '無法載入名單（僅主辦同工／管理員，且會寫入稽核）',
+      );
+    } finally {
+      setRosterLoading(false);
+    }
+  }
+
+  async function issueQr() {
+    if (!auth.token || !selectedId) return;
+    setError('');
+    try {
+      const data = await apiFetch<CheckinTokenResult>(
+        `/events/${selectedId}/checkin-token`,
+        { method: 'POST', token: auth.token },
+      );
+      setQr(data);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '產生簽到碼失敗');
+    }
+  }
+
+  if (!auth.token) {
+    return (
+      <AdminLoginForm
+        title="活動報名簽到"
+        hint="需 STAFF 以上登入。出席名單屬行蹤資料，僅主辦同工／管理員可查（§6.1 / §四.8）。"
+        auth={auth}
+      />
+    );
+  }
+
+  const selected = events.find((ev) => ev.id === selectedId);
+
   return (
     <div>
-      <h2>活動報名簽到</h2>
-      <p className="muted">
-        建立活動、檢視報名名單、匯出出席資料。出席名單屬行蹤資料，
-        僅主辦同工／管理員可查（§6.1 / §四.8），存取會寫入稽核紀錄。
-      </p>
-      <div className="card">
-        <h3>活動列表</h3>
-        <p className="muted">
-          串接 <code>GET /events</code>；名單 <code>GET /events/:id/roster</code>；
-          現場簽到用動態 QR（<code>POST /events/:id/checkin-token</code>）。
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2>活動報名簽到</h2>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button style={ghostBtn} onClick={() => auth.token && loadEvents(auth.token)}>
+            重新整理
+          </button>
+          <button style={ghostBtn} onClick={auth.logout}>
+            登出
+          </button>
+        </div>
       </div>
+      <p className="muted">
+        建立活動、查看報名名單、產生現場動態簽到碼。查看名單會寫入稽核紀錄。
+      </p>
+
+      {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
+
+      <form className="card" onSubmit={handleCreate}>
+        <h3>建立活動</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={labelStyle}>活動名稱 *</label>
+            <input
+              style={inputStyle}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              placeholder="例如：青年特會"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>地點</label>
+            <input
+              style={inputStyle}
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="大堂"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>開始時間 *</label>
+            <input
+              style={inputStyle}
+              type="datetime-local"
+              value={startAt}
+              onChange={(e) => setStartAt(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>名額上限</label>
+            <input
+              style={inputStyle}
+              type="number"
+              min={1}
+              value={capacity}
+              onChange={(e) => setCapacity(e.target.value)}
+              placeholder="不填則不限"
+            />
+          </div>
+        </div>
+        <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+          <input
+            type="checkbox"
+            checked={requiresGuardian}
+            onChange={(e) => setRequiresGuardian(e.target.checked)}
+          />
+          兒少活動（報名需監護人同意）
+        </label>
+        <button style={{ ...primaryBtn, width: 'auto', marginTop: 12 }} disabled={creating}>
+          {creating ? '建立中…' : '建立活動'}
+        </button>
+      </form>
+
+      <div className="card">
+        <h3>活動列表 {loading ? '（載入中…）' : `(${events.length})`}</h3>
+        {events.length === 0 && !loading ? (
+          <p className="muted">尚無活動，請先上方建立一筆。</p>
+        ) : (
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>名稱</th>
+                <th style={thStyle}>時間</th>
+                <th style={thStyle}>地點</th>
+                <th style={thStyle}>名額</th>
+                <th style={thStyle}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((ev) => (
+                <tr key={ev.id} style={selectedId === ev.id ? { background: '#eef2ff' } : undefined}>
+                  <td style={tdStyle}>
+                    {ev.title}
+                    {ev.requiresGuardianConsent ? (
+                      <span className="badge" style={{ marginLeft: 6 }}>
+                        兒少
+                      </span>
+                    ) : null}
+                  </td>
+                  <td style={tdStyle}>{new Date(ev.startAt).toLocaleString()}</td>
+                  <td style={tdStyle}>{ev.location ?? '—'}</td>
+                  <td style={tdStyle}>{ev.capacity ?? '不限'}</td>
+                  <td style={tdStyle}>
+                    <button style={ghostBtn} onClick={() => openRoster(ev.id)}>
+                      查看名單
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {selectedId ? (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3>出席／報名名單 — {selected?.title}</h3>
+            <button style={ghostBtn} onClick={() => setSelectedId(null)}>
+              關閉
+            </button>
+          </div>
+          <p className="muted">此操作已寫入稽核（EVENT_ROSTER_VIEW）。</p>
+
+          <div style={{ marginBottom: 16 }}>
+            <button style={primaryBtnInline} onClick={issueQr}>
+              產生動態簽到碼（30 秒）
+            </button>
+            {qr ? (
+              <div style={qrBox}>
+                <div className="muted">簽到碼（會友 App 掃碼／輸入）</div>
+                <code style={{ fontSize: 18, wordBreak: 'break-all' }}>{qr.token}</code>
+                <div className="muted">
+                  效期至 {new Date(qr.expiresAt).toLocaleTimeString()}（{qr.ttlSeconds} 秒）
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {rosterLoading ? (
+            <p className="muted">載入名單中…</p>
+          ) : roster.length === 0 ? (
+            <p className="muted">尚無人報名。</p>
+          ) : (
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>姓名</th>
+                  <th style={thStyle}>電話</th>
+                  <th style={thStyle}>狀態</th>
+                  <th style={thStyle}>監護人同意</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roster.map((row) => (
+                  <tr key={row.id}>
+                    <td style={tdStyle}>{row.user.displayName}</td>
+                    <td style={tdStyle}>{row.user.phone ?? '—'}</td>
+                    <td style={tdStyle}>
+                      <span className="badge">
+                        {STATUS_LABEL[row.status] ?? row.status}
+                      </span>
+                    </td>
+                    <td style={tdStyle}>{row.guardianConsent ? '是' : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 12,
+  color: '#6b7280',
+  margin: '0 0 4px',
+};
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '8px 10px',
+  border: '1px solid #d1d5db',
+  borderRadius: 8,
+  fontSize: 14,
+};
+const primaryBtn: React.CSSProperties = {
+  marginTop: 16,
+  width: '100%',
+  padding: '10px',
+  background: '#4f46e5',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 8,
+  cursor: 'pointer',
+  fontSize: 14,
+};
+const primaryBtnInline: React.CSSProperties = {
+  ...primaryBtn,
+  width: 'auto',
+  marginTop: 0,
+};
+const ghostBtn: React.CSSProperties = {
+  padding: '6px 12px',
+  background: '#fff',
+  color: '#374151',
+  border: '1px solid #d1d5db',
+  borderRadius: 8,
+  cursor: 'pointer',
+  fontSize: 13,
+};
+const tableStyle: React.CSSProperties = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  fontSize: 14,
+};
+const thStyle: React.CSSProperties = {
+  textAlign: 'left',
+  padding: '8px 6px',
+  borderBottom: '1px solid #e5e7eb',
+  color: '#6b7280',
+  fontWeight: 600,
+};
+const tdStyle: React.CSSProperties = {
+  padding: '10px 6px',
+  borderBottom: '1px solid #f3f4f6',
+};
+const qrBox: React.CSSProperties = {
+  marginTop: 12,
+  padding: 12,
+  background: '#f8fafc',
+  border: '1px dashed #cbd5e1',
+  borderRadius: 8,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+};
