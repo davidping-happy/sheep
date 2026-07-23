@@ -20,14 +20,28 @@ npm run build && node dist/main.js   # http://localhost:3000/api  (Swagger: /doc
 伺服器啟動後另開終端機：
 
 ```bash
-node demo/demo.mjs          # 代禱牆審核（17 項）
-node demo/demo-events.mjs    # 活動報名 + 動態 QR 簽到（16 項）
+node demo/demo.mjs               # 代禱牆審核（17 項）
+node demo/demo-events.mjs         # 活動報名 + 動態 QR 簽到（16 項）
+node demo/demo-admin-prayer.mjs   # 模擬後台審核 UI：登入→佇列→核准/退回
 ```
 
 - `demo.mjs`：註冊/登入、未授權 401、越權 403、公開代禱需審核、核准後可見、
   匿名顯示「一位弟兄姊妹」、僅 ADMIN 可稽核揭露真實身份、危機內容自動標記且不公開、發文者自行下架。
 - `demo-events.mjs`：僅同工可建活動、額滿轉候補、報名截止、兒少監護人同意、
   動態 QR 短效簽到碼、無效碼被擋、出席名單僅主辦同工可查、取消報名。
+- `demo-admin-prayer.mjs`：對應後台 `/prayer` 頁實際 API 流程。
+
+### 管理後台代禱牆審核（可點按核准/退回）
+
+```bash
+# API 需已啟動於 :3000
+cd apps/admin-web
+cp .env.example .env.local   # NEXT_PUBLIC_API_BASE=http://localhost:3000/api
+npm install --no-workspaces
+npm run dev                  # http://localhost:3001/prayer
+```
+
+用種子帳號 `admin@church.local` / `ChangeMe123456` 登入，即可對審核佇列按「核准」或「退回」。
 
 產生欄位加密金鑰（正式環境）：`openssl rand -hex 32` → 填入 `FIELD_ENCRYPTION_KEY`。
 

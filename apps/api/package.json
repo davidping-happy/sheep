@@ -16,7 +16,8 @@
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
     "demo": "node demo/demo.mjs",
-    "demo:events": "node demo/demo-events.mjs"
+    "demo:events": "node demo/demo-events.mjs",
+    "demo:admin-prayer": "node demo/demo-admin-prayer.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

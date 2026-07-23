@@ -68,12 +68,14 @@ cp .env.example .env          # 已預設 SQLite；正式環境改 Postgres（�
 npm install --no-workspaces
 npm run prisma:generate && npm run prisma:push && npm run seed
 npm run build && node dist/main.js   # http://localhost:3000/api  (Swagger: /docs)
-node demo/demo.mjs            # 一鍵驗證 auth + 代禱牆審核（17 項，全數通過）
+node demo/demo.mjs            # 一鍵驗證 auth + 代禱牆審核（17 項）
+node demo/demo-events.mjs     # 活動報名 + 動態 QR 簽到（16 項）
+node demo/demo-admin-prayer.mjs  # 模擬後台審核佇列核准/退回
 
 # 3. 管理後台（代禱牆審核佇列可實際登入、核准/退回）
 cd ../admin-web && npm install --no-workspaces
 cp .env.example .env.local     # NEXT_PUBLIC_API_BASE 預設 http://localhost:3000/api
-npm run dev                    # http://localhost:3001 → /prayer 登入 admin@church.local / ChangeMe123456
+npm run dev                    # http://localhost:3001/prayer  → admin@church.local / ChangeMe123456
 
 # 4. 行動端
 cd ../mobile && npm install && npm run start
