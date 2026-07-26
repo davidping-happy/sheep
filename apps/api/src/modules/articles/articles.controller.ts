@@ -44,6 +44,13 @@ export class ArticlesController {
     return this.service.listPublished(category);
   }
 
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Get('manage')
+  listManage() {
+    return this.service.listAll();
+  }
+
   @Public()
   @Get(':slug')
   get(@Param('slug') slug: string) {

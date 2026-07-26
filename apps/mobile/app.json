@@ -14,7 +14,7 @@
       "package": "org.church.churchsheep"
     },
     "extra": {
-      "apiBase": "http://localhost:3000/api"
+      "apiBase": "http://10.75.32.231:3000/api"
     }
   }
 }

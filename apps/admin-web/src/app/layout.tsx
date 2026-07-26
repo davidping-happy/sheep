@@ -9,11 +9,12 @@ export const metadata: Metadata = {
 
 const NAV = [
   { href: '/', label: '總覽' },
+  { href: '/livestream', label: '主日崇拜' },
   { href: '/articles', label: '靈修佳文 (CMS)' },
   { href: '/groups', label: '牧區・小組' },
+  { href: '/announcements', label: '公告推播' },
   { href: '/events', label: '活動報名簽到' },
   { href: '/prayer', label: '代禱牆審核' },
-  { href: '/announcements', label: '公告推播' },
   { href: '/audit', label: '稽核紀錄' },
 ];
 

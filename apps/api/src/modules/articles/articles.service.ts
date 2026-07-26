@@ -30,6 +30,23 @@ export class ArticlesService {
     });
   }
 
+  /** 後台 CMS：含草稿 */
+  listAll() {
+    return this.prisma.article.findMany({
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        category: true,
+        coverUrl: true,
+        isPublished: true,
+        publishedAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
   async getBySlug(slug: string) {
     const article = await this.prisma.article.findUnique({ where: { slug } });
     if (!article || !article.isPublished) throw new NotFoundException();

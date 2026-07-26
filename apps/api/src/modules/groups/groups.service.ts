@@ -30,7 +30,26 @@ export class GroupsService {
 
   listAreas() {
     return this.prisma.pastoralArea.findMany({
-      include: { groups: { select: { id: true, name: true, photoUrl: true } } },
+      include: {
+        groups: {
+          select: {
+            id: true,
+            name: true,
+            photoUrl: true,
+            meetingTime: true,
+            meetingPlace: true,
+            intro: true,
+          },
+          orderBy: { name: 'asc' },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  createArea(name: string, description?: string) {
+    return this.prisma.pastoralArea.create({
+      data: { name, description },
     });
   }
 
@@ -43,7 +62,6 @@ export class GroupsService {
       },
     });
     if (!group) throw new NotFoundException();
-    // 依 contactVisible 決定是否揭露聯絡欄位（此處骨架直接回傳，前端另遮罩）
     return group;
   }
 

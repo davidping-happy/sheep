@@ -33,6 +33,11 @@ class CreateGroupDto {
   @IsOptional() @IsUUID() leaderId?: string;
 }
 
+class CreateAreaDto {
+  @IsString() name!: string;
+  @IsOptional() @IsString() description?: string;
+}
+
 @ApiTags('groups')
 @Controller('groups')
 export class GroupsController {
@@ -42,6 +47,13 @@ export class GroupsController {
   @Get('areas')
   areas() {
     return this.service.listAreas();
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Post('areas')
+  createArea(@Body() dto: CreateAreaDto) {
+    return this.service.createArea(dto.name, dto.description);
   }
 
   @Public()

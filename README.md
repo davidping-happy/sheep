@@ -58,6 +58,8 @@ churchsheep/
 
 ## 快速開始
 
+> 第一階段 MVP 說明見 [`docs/phase1-mvp.md`](docs/phase1-mvp.md)。
+
 ### 第一次建置（裝套件 + 資料庫 + 編譯）
 
 ```powershell
@@ -71,38 +73,20 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1
 ```
 
 然後開啟：
-- 後台審核：http://localhost:3001/prayer（`admin@church.local` / `ChangeMe123456`）
+- 後台：http://localhost:3001（佳文／小組／公告／主日崇拜）
+- 行動端網頁：`cd apps\mobile; npx expo start --web` → http://localhost:8081
 - API 文件：http://localhost:3000/docs
 
-停止本機服務：`.\scripts\stop-dev.ps1`
+登入：`admin@church.local` / `ChangeMe123456`
 
-### 手動分步（等同 setup-all，方便理解每一步）
+驗證第一階段：
 
-```bash
-# ── 後端 API ──
-cd apps/api
-cp .env.example .env          # 密鑰與資料庫路徑（不進 git）
-npm install --no-workspaces   # 下載 NestJS / Prisma 等
-npm run prisma:generate       # 產生資料庫客戶端程式碼
-npm run prisma:push           # 建立 SQLite 資料表（本地 demo）
-npm run seed                  # 建立管理員與範例牧區
-npm run build && node dist/main.js
-
-# 驗證
-node demo/demo.mjs
-node demo/demo-events.mjs
-
-# ── 管理後台 ──
-cd ../admin-web
-cp .env.example .env.local
-npm install --no-workspaces
-npm run dev                   # http://localhost:3001/prayer
-
-# ── 行動端（會友 App 骨架）──
-cd ../mobile
-npm install --no-workspaces
-npm start                     # Expo；手機裝 Expo Go 掃碼
+```powershell
+cd apps\api
+node demo\demo-phase1.mjs
 ```
+
+停止本機服務：`.\scripts\stop-dev.ps1`
 
 ## 開發階段（對應設計文件第六章）
 

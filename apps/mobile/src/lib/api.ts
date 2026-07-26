@@ -1,9 +1,23 @@
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { tokenStore } from './secure-store';
 
-const API_BASE =
-  (Constants.expoConfig?.extra?.apiBase as string) ??
-  'http://localhost:3000/api';
+/**
+ * API 位址：
+ * - 網頁預覽（同電腦）：一律用 localhost，避免 CORS／區網 IP 問題
+ * - 真機：用 app.json 的 extra.apiBase（區網 IP）
+ */
+function resolveApiBase(): string {
+  if (Platform.OS === 'web') {
+    return 'http://localhost:3000/api';
+  }
+  return (
+    (Constants.expoConfig?.extra?.apiBase as string) ??
+    'http://localhost:3000/api'
+  );
+}
+
+const API_BASE = resolveApiBase();
 
 export class ApiError extends Error {
   constructor(
