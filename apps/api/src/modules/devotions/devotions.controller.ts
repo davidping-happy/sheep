@@ -31,6 +31,11 @@ export class DevotionsController {
     return this.service.findMine(userId);
   }
 
+  @Get('shared')
+  findShared(@CurrentUser('id') userId: string) {
+    return this.service.findSharedWithMe(userId);
+  }
+
   @Get(':id')
   findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.service.findOne(userId, id);

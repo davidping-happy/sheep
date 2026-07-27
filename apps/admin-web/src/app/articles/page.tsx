@@ -14,6 +14,11 @@ interface ArticleRow {
   updatedAt: string;
 }
 
+interface ArticleFull extends ArticleRow {
+  body: string;
+  coverUrl: string | null;
+}
+
 const CAT_OPTIONS = [
   { value: 'DAILY_BREAD', label: '每日靈糧' },
   { value: 'PASTOR_COLUMN', label: '牧者專欄' },
@@ -21,23 +26,28 @@ const CAT_OPTIONS = [
   { value: 'OTHER', label: '其他' },
 ];
 
+/** 階段二：完整 CMS — 新增／編輯／預覽／發布／下架 */
 export default function ArticlesPage() {
   const auth = useAdminAuth();
   const [rows, setRows] = useState<ArticleRow[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [body, setBody] = useState('');
   const [category, setCategory] = useState('DAILY_BREAD');
-  const [publishNow, setPublishNow] = useState(true);
+  const [publishNow, setPublishNow] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const load = useCallback(async (jwt: string) => {
     setLoading(true);
     setError('');
     try {
-      const data = await apiFetch<ArticleRow[]>('/articles/manage', { token: jwt });
+      const data = await apiFetch<ArticleRow[]>('/articles/manage', {
+        token: jwt,
+      });
       setRows(data);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '載入失敗');
@@ -59,29 +69,66 @@ export default function ArticlesPage() {
       .slice(0, 60);
   }
 
-  async function create(e: React.FormEvent) {
+  function resetForm() {
+    setEditingId(null);
+    setTitle('');
+    setSlug('');
+    setBody('');
+    setCategory('DAILY_BREAD');
+    setPublishNow(false);
+    setShowPreview(false);
+  }
+
+  async function loadEdit(id: string) {
+    if (!auth.token) return;
+    setError('');
+    try {
+      const a = await apiFetch<ArticleFull>(`/articles/manage/${id}`, {
+        token: auth.token,
+      });
+      setEditingId(a.id);
+      setTitle(a.title);
+      setSlug(a.slug);
+      setBody(a.body);
+      setCategory(a.category);
+      setPublishNow(a.isPublished);
+      setShowPreview(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '載入文章失敗');
+    }
+  }
+
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!auth.token) return;
     setSaving(true);
     setError('');
+    const payload = {
+      title,
+      slug: slug || autoSlug(title) || `article-${Date.now()}`,
+      body,
+      category,
+      isPublished: publishNow,
+    };
     try {
-      await apiFetch('/articles', {
-        method: 'POST',
-        token: auth.token,
-        body: JSON.stringify({
-          title,
-          slug: slug || autoSlug(title) || `article-${Date.now()}`,
-          body,
-          category,
-          isPublished: publishNow,
-        }),
-      });
-      setTitle('');
-      setSlug('');
-      setBody('');
+      if (editingId) {
+        await apiFetch(`/articles/${editingId}`, {
+          method: 'PATCH',
+          token: auth.token,
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch('/articles', {
+          method: 'POST',
+          token: auth.token,
+          body: JSON.stringify(payload),
+        });
+      }
+      resetForm();
       await load(auth.token);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '建立失敗');
+      setError(err instanceof ApiError ? err.message : '儲存失敗');
     } finally {
       setSaving(false);
     }
@@ -105,7 +152,7 @@ export default function ArticlesPage() {
     return (
       <AdminLoginForm
         title="靈修佳文 (CMS)"
-        hint="同工上稿、分類與發布。需 STAFF 以上。"
+        hint="階段二：草稿、編輯、預覽、發布／下架。"
         auth={auth}
       />
     );
@@ -126,24 +173,32 @@ export default function ArticlesPage() {
       </div>
       {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
 
-      <form className="card" onSubmit={create}>
-        <h3>新增文章</h3>
+      <form className="card" onSubmit={save}>
+        <h3>{editingId ? '編輯文章' : '新增文章'}</h3>
+        {editingId ? (
+          <p className="muted">
+            正在編輯 <code>{editingId.slice(0, 8)}…</code>{' '}
+            <button type="button" style={ghostBtn} onClick={resetForm}>
+              取消編輯
+            </button>
+          </p>
+        ) : null}
         <label style={labelStyle}>標題</label>
         <input
           style={inputStyle}
           value={title}
           onChange={(e) => {
             setTitle(e.target.value);
-            if (!slug) setSlug(autoSlug(e.target.value));
+            if (!editingId && !slug) setSlug(autoSlug(e.target.value));
           }}
           required
         />
-        <label style={labelStyle}>Slug（網址用）</label>
+        <label style={labelStyle}>Slug</label>
         <input
           style={inputStyle}
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
-          placeholder="daily-bread-xxx"
+          required
         />
         <label style={labelStyle}>分類</label>
         <select
@@ -159,7 +214,7 @@ export default function ArticlesPage() {
         </select>
         <label style={labelStyle}>內文</label>
         <textarea
-          style={{ ...inputStyle, minHeight: 140 }}
+          style={{ ...inputStyle, minHeight: 160 }}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           required
@@ -170,11 +225,46 @@ export default function ArticlesPage() {
             checked={publishNow}
             onChange={(e) => setPublishNow(e.target.checked)}
           />
-          立即發布
+          發布（取消勾選＝草稿）
         </label>
-        <button style={primaryBtn} disabled={saving}>
-          {saving ? '儲存中…' : '建立文章'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button style={primaryBtn} disabled={saving} type="submit">
+            {saving ? '儲存中…' : editingId ? '更新' : '建立'}
+          </button>
+          <button
+            type="button"
+            style={ghostBtn}
+            onClick={() => setShowPreview((v) => !v)}
+          >
+            {showPreview ? '關閉預覽' : '預覽'}
+          </button>
+        </div>
+        {showPreview ? (
+          <div
+            style={{
+              marginTop: 16,
+              padding: 16,
+              background: '#f8fafc',
+              borderRadius: 8,
+              border: '1px solid #e2e8f0',
+            }}
+          >
+            <span className="badge">
+              {CAT_OPTIONS.find((c) => c.value === category)?.label}
+            </span>
+            <h3 style={{ margin: '8px 0' }}>{title || '（無標題）'}</h3>
+            <pre
+              style={{
+                whiteSpace: 'pre-wrap',
+                fontFamily: 'inherit',
+                margin: 0,
+                lineHeight: 1.7,
+              }}
+            >
+              {body || '（無內容）'}
+            </pre>
+          </div>
+        ) : null}
       </form>
 
       <div className="card">
@@ -209,9 +299,14 @@ export default function ArticlesPage() {
                   )}
                 </td>
                 <td style={tdStyle}>
-                  <button style={ghostBtn} onClick={() => togglePublish(r)}>
-                    {r.isPublished ? '下架' : '發布'}
-                  </button>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button style={ghostBtn} onClick={() => loadEdit(r.id)}>
+                      編輯
+                    </button>
+                    <button style={ghostBtn} onClick={() => togglePublish(r)}>
+                      {r.isPublished ? '下架' : '發布'}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -236,7 +331,6 @@ const inputStyle: React.CSSProperties = {
   fontSize: 14,
 };
 const primaryBtn: React.CSSProperties = {
-  marginTop: 16,
   padding: '10px 16px',
   background: '#4f46e5',
   color: '#fff',

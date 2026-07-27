@@ -144,6 +144,30 @@ export default function EventsPage() {
     }
   }
 
+  /** 階段二：名單匯出 CSV（UTF-8 BOM，Excel 可開） */
+  function exportRosterCsv() {
+    if (!selected || roster.length === 0) return;
+    const header = ['姓名', '電話', '狀態', '監護人同意'];
+    const lines = roster.map((r) =>
+      [
+        r.user.displayName,
+        r.user.phone ?? '',
+        STATUS_LABEL[r.status] ?? r.status,
+        r.guardianConsent ? '是' : '',
+      ]
+        .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+        .join(','),
+    );
+    const csv = '\uFEFF' + [header.join(','), ...lines].join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `roster-${selected.title.replace(/[\\/:*?"<>|]/g, '_')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   if (!auth.token) {
     return (
       <AdminLoginForm
@@ -283,9 +307,16 @@ export default function EventsPage() {
           </div>
           <p className="muted">此操作已寫入稽核（EVENT_ROSTER_VIEW）。</p>
 
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button style={primaryBtnInline} onClick={issueQr}>
               產生動態簽到碼（30 秒）
+            </button>
+            <button
+              style={ghostBtn}
+              onClick={exportRosterCsv}
+              disabled={roster.length === 0}
+            >
+              匯出名單 CSV
             </button>
             {qr ? (
               <div style={qrBox}>

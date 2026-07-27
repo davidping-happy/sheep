@@ -1,10 +1,319 @@
-import Placeholder from '../components/Placeholder';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { api, ApiError } from '../lib/api';
 
+interface DevotionNote {
+  id: string;
+  noteDate: string;
+  scriptureRef: string | null;
+  content: string;
+  visibility: string;
+  createdAt: string;
+}
+
+function todayISO() {
+  const d = new Date();
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * 晨禱靈修筆記：雲端同步、AES 加密儲存、預設私人。
+ */
 export default function DevotionsScreen() {
+  const [items, setItems] = useState<DevotionNote[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [modal, setModal] = useState(false);
+  const [editing, setEditing] = useState<DevotionNote | null>(null);
+  const [noteDate, setNoteDate] = useState(todayISO());
+  const [scriptureRef, setScriptureRef] = useState('');
+  const [content, setContent] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setError('');
+    try {
+      const data = await api<DevotionNote[]>('/devotions');
+      setItems(data);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '載入失敗');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  function openCreate() {
+    setEditing(null);
+    setNoteDate(todayISO());
+    setScriptureRef('');
+    setContent('');
+    setModal(true);
+  }
+
+  function openEdit(n: DevotionNote) {
+    setEditing(n);
+    setNoteDate(String(n.noteDate).slice(0, 10));
+    setScriptureRef(n.scriptureRef ?? '');
+    setContent(n.content);
+    setModal(true);
+  }
+
+  async function save() {
+    if (!content.trim()) return;
+    setSaving(true);
+    setError('');
+    try {
+      if (editing) {
+        await api(`/devotions/${editing.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            scriptureRef: scriptureRef || undefined,
+            content: content.trim(),
+          }),
+        });
+      } else {
+        await api('/devotions', {
+          method: 'POST',
+          body: JSON.stringify({
+            noteDate: new Date(noteDate).toISOString(),
+            scriptureRef: scriptureRef || undefined,
+            content: content.trim(),
+            visibility: 'PRIVATE',
+          }),
+        });
+      }
+      setModal(false);
+      await load();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '儲存失敗');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function confirmDelete(n: DevotionNote) {
+    const run = async () => {
+      try {
+        await api(`/devotions/${n.id}`, { method: 'DELETE' });
+        await load();
+      } catch (e) {
+        setError(e instanceof ApiError ? e.message : '刪除失敗');
+      }
+    };
+    if (typeof window !== 'undefined' && window.confirm) {
+      if (window.confirm('確定刪除此筆記？')) run();
+    } else {
+      Alert.alert('刪除筆記', '確定刪除此筆記？', [
+        { text: '取消', style: 'cancel' },
+        { text: '刪除', style: 'destructive', onPress: run },
+      ]);
+    }
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
   return (
-    <Placeholder
-      endpoint="GET/POST /devotions"
-      note="個人靈修筆記。內容在後端 AES-256 加密儲存，預設私人可見；可選擇分享到小組。"
-    />
+    <View style={styles.root}>
+      <View style={styles.toolbar}>
+        <Text style={styles.hint}>內容已加密同步；預設僅自己可見</Text>
+        <Pressable style={styles.addBtn} onPress={openCreate}>
+          <Text style={styles.addBtnText}>＋ 新筆記</Text>
+        </Pressable>
+      </View>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <FlatList
+        data={items}
+        keyExtractor={(i) => i.id}
+        contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
+          />
+        }
+        ListEmptyComponent={
+          <Text style={styles.empty}>尚無筆記，點右上角開始寫晨禱。</Text>
+        }
+        renderItem={({ item }) => (
+          <Pressable style={styles.card} onPress={() => openEdit(item)}>
+            <View style={styles.row}>
+              <Text style={styles.date}>
+                {String(item.noteDate).slice(0, 10)}
+              </Text>
+              <Pressable onPress={() => confirmDelete(item)}>
+                <Text style={styles.del}>刪除</Text>
+              </Pressable>
+            </View>
+            {item.scriptureRef ? (
+              <Text style={styles.ref}>{item.scriptureRef}</Text>
+            ) : null}
+            <Text style={styles.preview} numberOfLines={3}>
+              {item.content}
+            </Text>
+          </Pressable>
+        )}
+      />
+
+      <Modal visible={modal} animationType="slide" transparent>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>
+              {editing ? '編輯筆記' : '新增晨禱筆記'}
+            </Text>
+            {!editing ? (
+              <>
+                <Text style={styles.label}>日期 (YYYY-MM-DD)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={noteDate}
+                  onChangeText={setNoteDate}
+                  placeholder="2026-07-26"
+                />
+              </>
+            ) : null}
+            <Text style={styles.label}>經文出處（選填）</Text>
+            <TextInput
+              style={styles.input}
+              value={scriptureRef}
+              onChangeText={setScriptureRef}
+              placeholder="例如：詩篇 23:1"
+            />
+            <Text style={styles.label}>筆記內容</Text>
+            <TextInput
+              style={[styles.input, styles.textarea]}
+              value={content}
+              onChangeText={setContent}
+              multiline
+              textAlignVertical="top"
+              placeholder="今天主對我說…"
+            />
+            <View style={styles.modalActions}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={() => setModal(false)}
+              >
+                <Text>取消</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+                onPress={save}
+                disabled={saving}
+              >
+                <Text style={styles.saveBtnText}>
+                  {saving ? '儲存中…' : '儲存'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#f6f5f0' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  toolbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  hint: { fontSize: 12, color: '#6b7280', flex: 1, marginRight: 8 },
+  addBtn: {
+    backgroundColor: '#4f46e5',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  addBtnText: { color: '#fff', fontWeight: '600' },
+  list: { padding: 16, paddingBottom: 40 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 10,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  date: { fontSize: 13, fontWeight: '600', color: '#4f46e5' },
+  del: { fontSize: 13, color: '#dc2626' },
+  ref: { fontSize: 13, color: '#6b7280', marginBottom: 4 },
+  preview: { fontSize: 15, lineHeight: 22, color: '#1f2937' },
+  empty: { textAlign: 'center', color: '#9ca3af', marginTop: 40 },
+  error: { color: '#dc2626', paddingHorizontal: 16, paddingTop: 8 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modal: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 20,
+    gap: 8,
+    maxHeight: '90%',
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  label: { fontSize: 12, color: '#6b7280' },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 15,
+    marginBottom: 4,
+  },
+  textarea: { minHeight: 140 },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 12,
+  },
+  cancelBtn: { padding: 12 },
+  saveBtn: {
+    backgroundColor: '#4f46e5',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  saveBtnText: { color: '#fff', fontWeight: '600' },
+});

@@ -46,15 +46,49 @@ export class DevotionsService {
   async findOne(userId: string, id: string) {
     const note = await this.prisma.devotionNote.findUnique({ where: { id } });
     if (!note) throw new NotFoundException();
-    if (note.authorId !== userId) {
-      // 僅本人可讀；GROUP 分享的讀取邏輯另行實作（需驗證同組）
-      throw new ForbiddenException('無權存取此筆記');
+    if (note.authorId === userId) return this.decrypt(note);
+
+    // 小組可見：同組成員可讀
+    if (
+      note.visibility === Visibility.GROUP &&
+      note.sharedGroupId
+    ) {
+      const membership = await this.prisma.groupMember.findUnique({
+        where: {
+          groupId_userId: {
+            groupId: note.sharedGroupId,
+            userId,
+          },
+        },
+      });
+      if (membership) return this.decrypt(note);
     }
-    return this.decrypt(note);
+    throw new ForbiddenException('無權存取此筆記');
+  }
+
+  /** 與我分享到小組的筆記（他人分享） */
+  async findSharedWithMe(userId: string) {
+    const memberships = await this.prisma.groupMember.findMany({
+      where: { userId },
+      select: { groupId: true },
+    });
+    const groupIds = memberships.map((m) => m.groupId);
+    if (groupIds.length === 0) return [];
+
+    const notes = await this.prisma.devotionNote.findMany({
+      where: {
+        visibility: Visibility.GROUP,
+        sharedGroupId: { in: groupIds },
+        authorId: { not: userId },
+      },
+      orderBy: { noteDate: 'desc' },
+      take: 50,
+    });
+    return notes.map((n) => this.decrypt(n));
   }
 
   async update(userId: string, id: string, dto: UpdateDevotionDto) {
-    await this.findOne(userId, id); // 所有權檢查
+    await this.assertOwner(userId, id);
     const note = await this.prisma.devotionNote.update({
       where: { id },
       data: {
@@ -63,16 +97,30 @@ export class DevotionsService {
           ? this.crypto.encrypt(dto.content)
           : undefined,
         visibility: dto.visibility,
-        sharedGroupId: dto.sharedGroupId,
+        sharedGroupId:
+          dto.visibility === Visibility.GROUP
+            ? dto.sharedGroupId
+            : dto.visibility === Visibility.PRIVATE
+              ? null
+              : dto.sharedGroupId,
       },
     });
     return this.decrypt(note);
   }
 
   async remove(userId: string, id: string) {
-    await this.findOne(userId, id);
+    await this.assertOwner(userId, id);
     await this.prisma.devotionNote.delete({ where: { id } });
     return { deleted: true };
+  }
+
+  private async assertOwner(userId: string, id: string) {
+    const note = await this.prisma.devotionNote.findUnique({ where: { id } });
+    if (!note) throw new NotFoundException();
+    if (note.authorId !== userId) {
+      throw new ForbiddenException('僅作者可修改／刪除筆記');
+    }
+    return note;
   }
 
   private decrypt(note: { contentEncrypted: string } & Record<string, unknown>) {

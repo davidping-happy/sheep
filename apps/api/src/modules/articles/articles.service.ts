@@ -47,6 +47,13 @@ export class ArticlesService {
     });
   }
 
+  /** 後台編輯：含未發布全文 */
+  async getForStaff(id: string) {
+    const article = await this.prisma.article.findUnique({ where: { id } });
+    if (!article) throw new NotFoundException();
+    return article;
+  }
+
   async getBySlug(slug: string) {
     const article = await this.prisma.article.findUnique({ where: { slug } });
     if (!article || !article.isPublished) throw new NotFoundException();
@@ -69,12 +76,15 @@ export class ArticlesService {
   }
 
   update(id: string, dto: Partial<ArticleInput>) {
+    const data: Record<string, unknown> = { ...dto };
+    if (dto.isPublished === true) {
+      data.publishedAt = new Date();
+    } else if (dto.isPublished === false) {
+      data.publishedAt = null;
+    }
     return this.prisma.article.update({
       where: { id },
-      data: {
-        ...dto,
-        publishedAt: dto.isPublished ? new Date() : undefined,
-      },
+      data,
     });
   }
 }

@@ -36,6 +36,11 @@ export class EventsController {
     return this.service.list();
   }
 
+  @Get('mine')
+  mine(@CurrentUser('id') userId: string) {
+    return this.service.myRegistrations(userId);
+  }
+
   @Post(':id/register')
   register(
     @CurrentUser() user: AuthUser,

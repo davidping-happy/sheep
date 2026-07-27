@@ -4,7 +4,7 @@
   "description": "教會 APP 後端 API — NestJS 核心服務層",
   "main": "dist/main.js",
   "scripts": {
-    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "build": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true});try{fs.unlinkSync('tsconfig.tsbuildinfo')}catch{}\" && tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
@@ -19,7 +19,8 @@
     "demo:events": "node demo/demo-events.mjs",
     "demo:admin-prayer": "node demo/demo-admin-prayer.mjs",
     "demo:admin-events": "node demo/demo-admin-events.mjs",
-    "demo:phase1": "node demo/demo-phase1.mjs"
+    "demo:phase1": "node demo/demo-phase1.mjs",
+    "demo:phase2": "node demo/demo-phase2.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

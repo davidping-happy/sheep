@@ -52,6 +52,13 @@ export class EventsService {
     return this.prisma.event.findMany({ orderBy: { startAt: 'asc' } });
   }
 
+  myRegistrations(userId: string) {
+    return this.prisma.eventRegistration.findMany({
+      where: { userId },
+      select: { eventId: true, status: true },
+    });
+  }
+
   async register(user: AuthUser, eventId: string, dto: RegisterEventDto) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
