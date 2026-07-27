@@ -24,20 +24,20 @@ interface Area {
 }
 
 const AUDIENCE_OPTS = [
-  { value: 'ALL', label: '?��??? },
-  { value: 'PASTORAL_AREA', label: '?��??��?' },
-  { value: 'GROUP', label: '?��?小�?' },
-  { value: 'ROLE', label: '?��?角色' },
+  { value: 'ALL', label: '全教會' },
+  { value: 'PASTORAL_AREA', label: '特定牧區' },
+  { value: 'GROUP', label: '特定小組' },
+  { value: 'ROLE', label: '特定角色' },
 ];
 
 const ROLE_OPTS = [
-  { value: 'MEMBER', label: '一?��??? },
-  { value: 'GROUP_LEADER', label: '小�??? },
-  { value: 'STAFF', label: '?��??�工' },
-  { value: 'ADMIN', label: '管�??? },
+  { value: 'MEMBER', label: '一般會友' },
+  { value: 'GROUP_LEADER', label: '小組長' },
+  { value: 'STAFF', label: '牧區同工' },
+  { value: 'ADMIN', label: '管理員' },
 ];
 
-/** ?�段二�??�眾?�播（全?��?／牧?�／�?組�?角色�?*/
+/** 階段二：分眾推播（全教會／牧區／小組／角色） */
 export default function AnnouncementsPage() {
   const auth = useAdminAuth();
   const [items, setItems] = useState<Announcement[]>([]);
@@ -65,7 +65,7 @@ export default function AnnouncementsPage() {
       setPastoralAreaId((prev) => prev || areaList[0]?.id || '');
       setTargetGroupId((prev) => prev || areaList[0]?.groups[0]?.id || '');
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '載入失�?');
+      setError(e instanceof ApiError ? e.message : '載入失敗');
     }
   }, []);
 
@@ -102,7 +102,7 @@ export default function AnnouncementsPage() {
       );
       setPreview(r);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '?�覽失�?');
+      setError(e instanceof ApiError ? e.message : '預覽失敗');
     }
   }
 
@@ -127,7 +127,7 @@ export default function AnnouncementsPage() {
       setBody('');
       await load(auth.token);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '?��?失�?');
+      setError(err instanceof ApiError ? err.message : '操作失敗');
     }
   }
 
@@ -142,7 +142,7 @@ export default function AnnouncementsPage() {
       setPreview({ userCount: pub.push?.userCount ?? 0 });
       await load(auth.token);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '?��?失�?');
+      setError(e instanceof ApiError ? e.message : '發布失敗');
     } finally {
       setBusyId(null);
     }
@@ -151,8 +151,8 @@ export default function AnnouncementsPage() {
   if (!auth.token) {
     return (
       <AdminLoginForm
-        title="?��??�播"
-        hint="?�段二�??�眾?�送�??��??��??��?／�?組�?角色）。FCM 仍為 stub，�??�傳?�估?�件人數??
+        title="公告推播"
+        hint="階段二：分眾發送（全教會／牧區／小組／角色）。FCM 仍為 stub，會回傳預估收件人數。"
         auth={auth}
       />
     );
@@ -161,36 +161,36 @@ export default function AnnouncementsPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>?��??�播（�??��?</h2>
+        <h2>公告推播（分眾）</h2>
         <button style={ghostBtn} onClick={auth.logout}>
-          ?�出
+          登出
         </button>
       </div>
       {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
       {preview ? (
         <p className="muted">
-          ?�近�?次�??��?估�??�播：�? <strong>{preview.userCount}</strong> 位�???
-          （�?�?token ?��?；未??FCM ?�為 stub�?
+          最近一次分眾預估／推播：約 <strong>{preview.userCount}</strong> 位會友
+          （裝置 token 另計；未接 FCM 時為 stub）
         </p>
       ) : null}
 
       <form className="card" onSubmit={create}>
-        <h3>建�??��?</h3>
-        <label style={labelStyle}>標�?</label>
+        <h3>建立公告</h3>
+        <label style={labelStyle}>標題</label>
         <input
           style={inputStyle}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
         />
-        <label style={labelStyle}>?�容</label>
+        <label style={labelStyle}>內容</label>
         <textarea
           style={{ ...inputStyle, minHeight: 100 }}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           required
         />
-        <label style={labelStyle}>?�眾對象</label>
+        <label style={labelStyle}>分眾對象</label>
         <select
           style={inputStyle}
           value={audience}
@@ -205,7 +205,7 @@ export default function AnnouncementsPage() {
 
         {audience === 'PASTORAL_AREA' ? (
           <>
-            <label style={labelStyle}>?��?</label>
+            <label style={labelStyle}>牧區</label>
             <select
               style={inputStyle}
               value={pastoralAreaId}
@@ -222,7 +222,7 @@ export default function AnnouncementsPage() {
 
         {audience === 'GROUP' ? (
           <>
-            <label style={labelStyle}>小�?</label>
+            <label style={labelStyle}>小組</label>
             <select
               style={inputStyle}
               value={targetGroupId}
@@ -260,21 +260,21 @@ export default function AnnouncementsPage() {
             checked={saveAsDraft}
             onChange={(e) => setSaveAsDraft(e.target.checked)}
           />
-          ?��??�稿（�?後�??��?�?
+          僅存草稿（稍後再發布）
         </label>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <button type="button" style={ghostBtn} onClick={previewAudience}>
-            ?�估?�件人數
+            預估收件人數
           </button>
           <button style={primaryBtn} type="submit">
-            {saveAsDraft ? '存�?�? : '建�?並發布推??}
+            {saveAsDraft ? '存草稿' : '建立並發布推播'}
           </button>
         </div>
       </form>
 
       <div className="card">
-        <h3>?��??�表（含?�稿�?{items.length})</h3>
+        <h3>公告列表（含草稿）({items.length})</h3>
         {items.map((a) => (
           <div
             key={a.id}
@@ -284,9 +284,9 @@ export default function AnnouncementsPage() {
             <div className="muted">
               {AUDIENCE_OPTS.find((o) => o.value === a.audience)?.label ??
                 a.audience}
-              {a.isPublished ? ' · 已發�? : ' · ?�稿'}
+              {a.isPublished ? ' · 已發布' : ' · 草稿'}
               {a.pushSentAt
-                ? ` · ?�播 ${new Date(a.pushSentAt).toLocaleString()}`
+                ? ` · 推播 ${new Date(a.pushSentAt).toLocaleString()}`
                 : ''}
             </div>
             <p style={{ whiteSpace: 'pre-wrap' }}>{a.body}</p>
@@ -296,7 +296,7 @@ export default function AnnouncementsPage() {
                 disabled={busyId === a.id}
                 onClick={() => publish(a.id)}
               >
-                ?��?／推??
+                發布／推播
               </button>
             ) : (
               <button
@@ -304,7 +304,7 @@ export default function AnnouncementsPage() {
                 disabled={busyId === a.id}
                 onClick={() => publish(a.id)}
               >
-                ?�次?�播
+                再次推播
               </button>
             )}
           </div>

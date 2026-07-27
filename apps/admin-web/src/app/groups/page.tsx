@@ -38,7 +38,7 @@ export default function GroupsPage() {
       setAreas(data);
       setGroupAreaId((prev) => prev || data[0]?.id || '');
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'è¼‰å…¥å¤±æ?');
+      setError(e instanceof ApiError ? e.message : 'è¼‰å…¥å¤±æ•—');
     }
   }, []);
 
@@ -59,7 +59,7 @@ export default function GroupsPage() {
       setAreaDesc('');
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'å»ºç??§å?å¤±æ?');
+      setError(err instanceof ApiError ? err.message : 'å»ºç«‹ç‰§å€å¤±æ•—');
     }
   }
 
@@ -84,15 +84,15 @@ export default function GroupsPage() {
       setMeetingPlace('');
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'å»ºç?å°ç?å¤±æ?');
+      setError(err instanceof ApiError ? err.message : 'å»ºç«‹å°çµ„å¤±æ•—');
     }
   }
 
   if (!auth.token) {
     return (
       <AdminLoginForm
-        title="?§å??»å?çµ?
-        hint="ç¶­è­·?§å??‡å?çµ„ä?ç´¹ï??®é?å¼è??™ï??‚è¯çµ¡è?è¨Šé?è¨­ä??¬é???
+        title="ç‰§å€ãƒ»å°çµ„"
+        hint="ç¶­è­·ç‰§å€èˆ‡å°çµ„ä»‹ç´¹ï¼ˆç›®éŒ„å¼è³‡æ–™ï¼‰ã€‚è¯çµ¡è³‡è¨Šé è¨­ä¸å…¬é–‹ã€‚"
         auth={auth}
       />
     );
@@ -101,35 +101,35 @@ export default function GroupsPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>?§å??»å?çµ?/h2>
+        <h2>ç‰§å€ãƒ»å°çµ„</h2>
         <button style={ghostBtn} onClick={auth.logout}>
-          ?»å‡º
+          ç™»å‡º
         </button>
       </div>
       {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
 
       <div className="grid">
         <form className="card" onSubmit={createArea}>
-          <h3>?°å??§å?</h3>
-          <label style={labelStyle}>?ç¨±</label>
+          <h3>æ–°å¢ç‰§å€</h3>
+          <label style={labelStyle}>åç¨±</label>
           <input
             style={inputStyle}
             value={areaName}
             onChange={(e) => setAreaName(e.target.value)}
             required
           />
-          <label style={labelStyle}>ç°¡ä?</label>
+          <label style={labelStyle}>ç°¡ä»‹</label>
           <input
             style={inputStyle}
             value={areaDesc}
             onChange={(e) => setAreaDesc(e.target.value)}
           />
-          <button style={primaryBtn}>å»ºç??§å?</button>
+          <button style={primaryBtn}>å»ºç«‹ç‰§å€</button>
         </form>
 
         <form className="card" onSubmit={createGroup}>
-          <h3>?°å?å°ç?</h3>
-          <label style={labelStyle}>?€å±¬ç‰§?€</label>
+          <h3>æ–°å¢å°çµ„</h3>
+          <label style={labelStyle}>æ‰€å±¬ç‰§å€</label>
           <select
             style={inputStyle}
             value={groupAreaId}
@@ -142,33 +142,33 @@ export default function GroupsPage() {
               </option>
             ))}
           </select>
-          <label style={labelStyle}>å°ç??ç¨±</label>
+          <label style={labelStyle}>å°çµ„åç¨±</label>
           <input
             style={inputStyle}
             value={groupName}
             onChange={(e) => setGroupName(e.target.value)}
             required
           />
-          <label style={labelStyle}>ç°¡ä?</label>
+          <label style={labelStyle}>ç°¡ä»‹</label>
           <input
             style={inputStyle}
             value={intro}
             onChange={(e) => setIntro(e.target.value)}
           />
-          <label style={labelStyle}>?šæ??‚é?</label>
+          <label style={labelStyle}>èšæœƒæ™‚é–“</label>
           <input
             style={inputStyle}
             value={meetingTime}
             onChange={(e) => setMeetingTime(e.target.value)}
-            placeholder="?±ä? 19:30"
+            placeholder="é€±ä¸‰ 19:30"
           />
-          <label style={labelStyle}>?šæ??°é?</label>
+          <label style={labelStyle}>èšæœƒåœ°é»</label>
           <input
             style={inputStyle}
             value={meetingPlace}
             onChange={(e) => setMeetingPlace(e.target.value)}
           />
-          <button style={primaryBtn}>å»ºç?å°ç?</button>
+          <button style={primaryBtn}>å»ºç«‹å°çµ„</button>
         </form>
       </div>
 

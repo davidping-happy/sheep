@@ -20,13 +20,13 @@ interface ArticleFull extends ArticleRow {
 }
 
 const CAT_OPTIONS = [
-  { value: 'DAILY_BREAD', label: '每日?�糧' },
-  { value: 'PASTOR_COLUMN', label: '?�者�?�? },
-  { value: 'TESTIMONY', label: '見�?' },
-  { value: 'OTHER', label: '?��?' },
+  { value: 'DAILY_BREAD', label: '每日靈糧' },
+  { value: 'PASTOR_COLUMN', label: '牧者專欄' },
+  { value: 'TESTIMONY', label: '見證' },
+  { value: 'OTHER', label: '其他' },
 ];
 
-/** ?�段二�?完整 CMS ???��?／編輯�??�覽／發布�?下架 */
+/** 階段二：完整 CMS — 新增／編輯／預覽／發布／下架 */
 export default function ArticlesPage() {
   const auth = useAdminAuth();
   const [rows, setRows] = useState<ArticleRow[]>([]);
@@ -50,7 +50,7 @@ export default function ArticlesPage() {
       });
       setRows(data);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '載入失�?');
+      setError(e instanceof ApiError ? e.message : '載入失敗');
     } finally {
       setLoading(false);
     }
@@ -95,7 +95,7 @@ export default function ArticlesPage() {
       setShowPreview(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '載入?��?失�?');
+      setError(e instanceof ApiError ? e.message : '載入文章失敗');
     }
   }
 
@@ -128,7 +128,7 @@ export default function ArticlesPage() {
       resetForm();
       await load(auth.token);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '?��?失�?');
+      setError(err instanceof ApiError ? err.message : '儲存失敗');
     } finally {
       setSaving(false);
     }
@@ -144,15 +144,15 @@ export default function ArticlesPage() {
       });
       await load(auth.token);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '?�新失�?');
+      setError(e instanceof ApiError ? e.message : '更新失敗');
     }
   }
 
   if (!auth.token) {
     return (
       <AdminLoginForm
-        title="?�修佳�? (CMS)"
-        hint="?�段二�??�稿?�編輯、�?覽、發布�?下架??
+        title="靈修佳文 (CMS)"
+        hint="階段二：草稿、編輯、預覽、發布／下架。"
         auth={auth}
       />
     );
@@ -161,29 +161,29 @@ export default function ArticlesPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>?�修佳�? (CMS)</h2>
+        <h2>靈修佳文 (CMS)</h2>
         <div style={{ display: 'flex', gap: 8 }}>
           <button style={ghostBtn} onClick={() => auth.token && load(auth.token)}>
-            ?�新?��?
+            重新整理
           </button>
           <button style={ghostBtn} onClick={auth.logout}>
-            ?�出
+            登出
           </button>
         </div>
       </div>
       {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
 
       <form className="card" onSubmit={save}>
-        <h3>{editingId ? '編輯?��?' : '?��??��?'}</h3>
+        <h3>{editingId ? '編輯文章' : '新增文章'}</h3>
         {editingId ? (
           <p className="muted">
-            �?��編輯 <code>{editingId.slice(0, 8)}??/code>{' '}
+            正在編輯 <code>{editingId.slice(0, 8)}…</code>{' '}
             <button type="button" style={ghostBtn} onClick={resetForm}>
-              ?��?編輯
+              取消編輯
             </button>
           </p>
         ) : null}
-        <label style={labelStyle}>標�?</label>
+        <label style={labelStyle}>標題</label>
         <input
           style={inputStyle}
           value={title}
@@ -200,7 +200,7 @@ export default function ArticlesPage() {
           onChange={(e) => setSlug(e.target.value)}
           required
         />
-        <label style={labelStyle}>?��?</label>
+        <label style={labelStyle}>分類</label>
         <select
           style={inputStyle}
           value={category}
@@ -212,7 +212,7 @@ export default function ArticlesPage() {
             </option>
           ))}
         </select>
-        <label style={labelStyle}>?��?</label>
+        <label style={labelStyle}>內文</label>
         <textarea
           style={{ ...inputStyle, minHeight: 160 }}
           value={body}
@@ -225,18 +225,18 @@ export default function ArticlesPage() {
             checked={publishNow}
             onChange={(e) => setPublishNow(e.target.checked)}
           />
-          ?��?（�?消勾?��??�稿�?
+          發布（取消勾選＝草稿）
         </label>
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <button style={primaryBtn} disabled={saving} type="submit">
-            {saving ? '?��?中�? : editingId ? '?�新' : '建�?'}
+            {saving ? '儲存中…' : editingId ? '更新' : '建立'}
           </button>
           <button
             type="button"
             style={ghostBtn}
             onClick={() => setShowPreview((v) => !v)}
           >
-            {showPreview ? '?��??�覽' : '?�覽'}
+            {showPreview ? '關閉預覽' : '預覽'}
           </button>
         </div>
         {showPreview ? (
@@ -252,7 +252,7 @@ export default function ArticlesPage() {
             <span className="badge">
               {CAT_OPTIONS.find((c) => c.value === category)?.label}
             </span>
-            <h3 style={{ margin: '8px 0' }}>{title || '（無標�?�?}</h3>
+            <h3 style={{ margin: '8px 0' }}>{title || '（無標題）'}</h3>
             <pre
               style={{
                 whiteSpace: 'pre-wrap',
@@ -261,20 +261,20 @@ export default function ArticlesPage() {
                 lineHeight: 1.7,
               }}
             >
-              {body || '（無?�容�?}
+              {body || '（無內容）'}
             </pre>
           </div>
         ) : null}
       </form>
 
       <div className="card">
-        <h3>?��??�表 {loading ? '（�??�中?��?' : `(${rows.length})`}</h3>
+        <h3>文章列表 {loading ? '（載入中…）' : `(${rows.length})`}</h3>
         <table style={tableStyle}>
           <thead>
             <tr>
-              <th style={thStyle}>標�?</th>
-              <th style={thStyle}>?��?</th>
-              <th style={thStyle}>?�??/th>
+              <th style={thStyle}>標題</th>
+              <th style={thStyle}>分類</th>
+              <th style={thStyle}>狀態</th>
               <th style={thStyle}></th>
             </tr>
           </thead>
@@ -293,9 +293,9 @@ export default function ArticlesPage() {
                 </td>
                 <td style={tdStyle}>
                   {r.isPublished ? (
-                    <span className="badge">已發�?/span>
+                    <span className="badge">已發布</span>
                   ) : (
-                    <span style={draftBadge}>?�稿</span>
+                    <span style={draftBadge}>草稿</span>
                   )}
                 </td>
                 <td style={tdStyle}>
@@ -304,7 +304,7 @@ export default function ArticlesPage() {
                       編輯
                     </button>
                     <button style={ghostBtn} onClick={() => togglePublish(r)}>
-                      {r.isPublished ? '下架' : '?��?'}
+                      {r.isPublished ? '下架' : '發布'}
                     </button>
                   </div>
                 </td>
