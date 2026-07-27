@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch, ApiError } from '../../lib/api';
 import { AdminLoginForm, useAdminAuth } from '../../lib/useAdminAuth';
+import { DynamicCheckinQr } from './DynamicCheckinQr';
 
 interface EventItem {
   id: string;
@@ -20,11 +21,16 @@ interface RosterRow {
   id: string;
   status: string;
   guardianConsent: boolean;
+  checkedIn?: boolean;
+  checkedInAt?: string | null;
+  checkinMethod?: string | null;
   user: { id: string; displayName: string; phone: string | null };
 }
 
 interface CheckinTokenResult {
   token: string;
+  eventId: string;
+  payload: string;
   expiresAt: string;
   ttlSeconds: number;
 }
@@ -50,6 +56,8 @@ export default function EventsPage() {
   const [rosterLoading, setRosterLoading] = useState(false);
   const [qr, setQr] = useState<CheckinTokenResult | null>(null);
   const [creating, setCreating] = useState(false);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const issuingRef = useRef(false);
 
   // 建立活動表單
   const [title, setTitle] = useState('');
@@ -111,6 +119,7 @@ export default function EventsPage() {
     if (!auth.token) return;
     setSelectedId(eventId);
     setQr(null);
+    setAutoRotate(false);
     setRosterLoading(true);
     setError('');
     try {
@@ -130,8 +139,9 @@ export default function EventsPage() {
     }
   }
 
-  async function issueQr() {
-    if (!auth.token || !selectedId) return;
+  const issueQr = useCallback(async () => {
+    if (!auth.token || !selectedId || issuingRef.current) return;
+    issuingRef.current = true;
     setError('');
     try {
       const data = await apiFetch<CheckinTokenResult>(
@@ -141,19 +151,29 @@ export default function EventsPage() {
       setQr(data);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '產生簽到碼失敗');
+      setAutoRotate(false);
+    } finally {
+      issuingRef.current = false;
     }
+  }, [auth.token, selectedId]);
+
+  async function startLiveQr() {
+    setAutoRotate(true);
+    await issueQr();
   }
 
-  /** 階段二：名單匯出 CSV（UTF-8 BOM，Excel 可開） */
+  /** 名單匯出 CSV（含簽到） */
   function exportRosterCsv() {
     if (!selected || roster.length === 0) return;
-    const header = ['姓名', '電話', '狀態', '監護人同意'];
+    const header = ['姓名', '電話', '狀態', '監護人同意', '已簽到', '簽到時間'];
     const lines = roster.map((r) =>
       [
         r.user.displayName,
         r.user.phone ?? '',
         STATUS_LABEL[r.status] ?? r.status,
         r.guardianConsent ? '是' : '',
+        r.checkedIn ? '是' : '',
+        r.checkedInAt ? new Date(r.checkedInAt).toLocaleString() : '',
       ]
         .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
         .join(','),
@@ -308,9 +328,20 @@ export default function EventsPage() {
           <p className="muted">此操作已寫入稽核（EVENT_ROSTER_VIEW）。</p>
 
           <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button style={primaryBtnInline} onClick={issueQr}>
-              產生動態簽到碼（30 秒）
+            <button style={primaryBtnInline} onClick={startLiveQr}>
+              {autoRotate ? '重新產生動態 QR' : '開始現場動態 QR（自動輪替）'}
             </button>
+            {autoRotate ? (
+              <button
+                style={ghostBtn}
+                onClick={() => {
+                  setAutoRotate(false);
+                  setQr(null);
+                }}
+              >
+                停止輪替
+              </button>
+            ) : null}
             <button
               style={ghostBtn}
               onClick={exportRosterCsv}
@@ -319,13 +350,14 @@ export default function EventsPage() {
               匯出名單 CSV
             </button>
             {qr ? (
-              <div style={qrBox}>
-                <div className="muted">簽到碼（會友 App 掃碼／輸入）</div>
-                <code style={{ fontSize: 18, wordBreak: 'break-all' }}>{qr.token}</code>
-                <div className="muted">
-                  效期至 {new Date(qr.expiresAt).toLocaleTimeString()}（{qr.ttlSeconds} 秒）
-                </div>
-              </div>
+              <DynamicCheckinQr
+                payload={qr.payload}
+                token={qr.token}
+                expiresAt={qr.expiresAt}
+                ttlSeconds={qr.ttlSeconds}
+                autoRotate={autoRotate}
+                onRefresh={issueQr}
+              />
             ) : null}
           </div>
 
@@ -340,6 +372,7 @@ export default function EventsPage() {
                   <th style={thStyle}>姓名</th>
                   <th style={thStyle}>電話</th>
                   <th style={thStyle}>狀態</th>
+                  <th style={thStyle}>簽到</th>
                   <th style={thStyle}>監護人同意</th>
                 </tr>
               </thead>
@@ -352,6 +385,18 @@ export default function EventsPage() {
                       <span className="badge">
                         {STATUS_LABEL[row.status] ?? row.status}
                       </span>
+                    </td>
+                    <td style={tdStyle}>
+                      {row.checkedIn ? (
+                        <span className="badge">
+                          已簽到
+                          {row.checkedInAt
+                            ? ` ${new Date(row.checkedInAt).toLocaleTimeString()}`
+                            : ''}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                     <td style={tdStyle}>{row.guardianConsent ? '是' : '—'}</td>
                   </tr>
@@ -419,13 +464,4 @@ const tdStyle: React.CSSProperties = {
   padding: '10px 6px',
   borderBottom: '1px solid #f3f4f6',
 };
-const qrBox: React.CSSProperties = {
-  marginTop: 12,
-  padding: 12,
-  background: '#f8fafc',
-  border: '1px dashed #cbd5e1',
-  borderRadius: 8,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
-};
+

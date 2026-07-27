@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch, ApiError } from '../../lib/api';
+import { AdminLoginForm, useAdminAuth } from '../../lib/useAdminAuth';
 
 interface PrayerItem {
   id: string;
@@ -15,10 +16,6 @@ interface PrayerItem {
   createdAt: string;
 }
 
-interface LoginResult {
-  accessToken: string;
-}
-
 const SENSITIVE_LABEL: Record<string, string> = {
   SELF_HARM: '自傷/自殺意念',
   DOMESTIC_VIOLENCE: '家暴',
@@ -27,15 +24,14 @@ const SENSITIVE_LABEL: Record<string, string> = {
   INVOLVES_MINOR: '涉及未成年',
 };
 
+/** 階段三：代禱牆審核＋匿名身份稽核（僅 ADMIN） */
 export default function PrayerModerationPage() {
-  const [token, setToken] = useState<string | null>(null);
-  const [email, setEmail] = useState('admin@church.local');
-  const [password, setPassword] = useState('ChangeMe123456');
-  const [loginError, setLoginError] = useState('');
+  const auth = useAdminAuth();
   const [queue, setQueue] = useState<PrayerItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [revealInfo, setRevealInfo] = useState<string>('');
 
   const loadQueue = useCallback(async (jwt: string) => {
     setLoading(true);
@@ -53,35 +49,18 @@ export default function PrayerModerationPage() {
   }, []);
 
   useEffect(() => {
-    if (token) loadQueue(token);
-  }, [token, loadQueue]);
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoginError('');
-    try {
-      const res = await apiFetch<LoginResult>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
-      setToken(res.accessToken);
-    } catch (err) {
-      setLoginError(
-        err instanceof ApiError ? err.message : '登入失敗，請確認 API 是否啟動',
-      );
-    }
-  }
+    if (auth.token) loadQueue(auth.token);
+  }, [auth.token, loadQueue]);
 
   async function moderate(id: string, decision: 'APPROVED' | 'REJECTED') {
-    if (!token) return;
+    if (!auth.token) return;
     setBusyId(id);
     try {
       await apiFetch(`/prayer/${id}/moderate`, {
         method: 'POST',
-        token,
+        token: auth.token,
         body: JSON.stringify({ decision }),
       });
-      // 樂觀更新：從佇列移除已處理項目
       setQueue((prev) => prev.filter((p) => p.id !== id));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '操作失敗');
@@ -90,40 +69,36 @@ export default function PrayerModerationPage() {
     }
   }
 
-  if (!token) {
+  async function reveal(id: string) {
+    if (!auth.token) return;
+    setBusyId(id);
+    setRevealInfo('');
+    try {
+      const r = await apiFetch<{
+        realUserId: string;
+        displayName: string | null;
+        email: string | null;
+      }>(`/prayer/${id}/reveal`, {
+        method: 'POST',
+        token: auth.token,
+      });
+      setRevealInfo(
+        `稽核揭示：${r.displayName ?? '（無姓名）'} / ${r.email ?? r.realUserId}`,
+      );
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '揭示失敗（需 ADMIN）');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (!auth.token) {
     return (
-      <div>
-        <h2>代禱牆審核</h2>
-        <p className="muted">
-          需 STAFF 以上或代禱牆管理同工登入。後台正式環境建議強制 2FA（§四.3）。
-        </p>
-        <form className="card" style={{ maxWidth: 360 }} onSubmit={handleLogin}>
-          <h3>登入</h3>
-          <label style={labelStyle}>Email</label>
-          <input
-            style={inputStyle}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-          />
-          <label style={labelStyle}>密碼</label>
-          <input
-            style={inputStyle}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-          />
-          {loginError ? (
-            <p style={{ color: '#dc2626', fontSize: 13 }}>{loginError}</p>
-          ) : null}
-          <button style={primaryBtn} type="submit">
-            登入
-          </button>
-          <p className="muted" style={{ marginTop: 8 }}>
-            種子帳號：admin@church.local / ChangeMe123456
-          </p>
-        </form>
-      </div>
+      <AdminLoginForm
+        title="代禱牆審核"
+        hint="階段三：公開內容審核、危機標記、匿名身份稽核（ADMIN）。"
+        auth={auth}
+      />
     );
   }
 
@@ -138,20 +113,22 @@ export default function PrayerModerationPage() {
       >
         <h2>代禱牆審核佇列</h2>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button style={ghostBtn} onClick={() => loadQueue(token)}>
+          <button style={ghostBtn} onClick={() => auth.token && loadQueue(auth.token)}>
             重新整理
           </button>
-          <button style={ghostBtn} onClick={() => setToken(null)}>
+          <button style={ghostBtn} onClick={auth.logout}>
             登出
           </button>
         </div>
       </div>
       <p className="muted">
-        公開內容需發布前人工審核；危機類（自傷/家暴/精神危機）自動標記
-        <span className="badge">AUTO_FLAGGED</span>，不公開曝光並優先通報關懷同工。
+        公開內容需發布前人工審核；危機類自動
+        <span className="badge">AUTO_FLAGGED</span>
+        ，不公開曝光並寫入稽核通報。
       </p>
 
       {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
+      {revealInfo ? <p style={{ color: '#92400e' }}>{revealInfo}</p> : null}
       {loading ? <p className="muted">載入中…</p> : null}
 
       {!loading && queue.length === 0 ? (
@@ -181,7 +158,7 @@ export default function PrayerModerationPage() {
 
           <p style={{ margin: '0 0 12px', lineHeight: 1.6 }}>{item.content}</p>
 
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               style={approveBtn}
               disabled={busyId === item.id}
@@ -196,6 +173,15 @@ export default function PrayerModerationPage() {
             >
               退回
             </button>
+            {item.isAnonymous ? (
+              <button
+                style={ghostBtn}
+                disabled={busyId === item.id}
+                onClick={() => reveal(item.id)}
+              >
+                揭示身份（稽核）
+              </button>
+            ) : null}
             <span className="muted" style={{ marginLeft: 'auto' }}>
               {new Date(item.createdAt).toLocaleString()}
             </span>
@@ -206,30 +192,6 @@ export default function PrayerModerationPage() {
   );
 }
 
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 12,
-  color: '#6b7280',
-  margin: '10px 0 4px',
-};
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 10px',
-  border: '1px solid #d1d5db',
-  borderRadius: 8,
-  fontSize: 14,
-};
-const primaryBtn: React.CSSProperties = {
-  marginTop: 16,
-  width: '100%',
-  padding: '10px',
-  background: '#4f46e5',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 8,
-  cursor: 'pointer',
-  fontSize: 14,
-};
 const ghostBtn: React.CSSProperties = {
   padding: '6px 12px',
   background: '#fff',

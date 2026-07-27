@@ -20,7 +20,8 @@
     "demo:admin-prayer": "node demo/demo-admin-prayer.mjs",
     "demo:admin-events": "node demo/demo-admin-events.mjs",
     "demo:phase1": "node demo/demo-phase1.mjs",
-    "demo:phase2": "node demo/demo-phase2.mjs"
+    "demo:phase2": "node demo/demo-phase2.mjs",
+    "demo:phase3": "node demo/demo-phase3.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

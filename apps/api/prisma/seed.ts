@@ -134,10 +134,61 @@ async function main() {
     });
   }
 
-  console.log('Seed 完成（Phase 1 MVP）：', {
+  // ── Phase 3：示範活動 + 管理員加入小組（小組代禱／分眾用）──
+  const group = await prisma.smallGroup.findFirst({
+    where: { pastoralAreaId: area.id },
+    orderBy: { name: 'asc' },
+  });
+  if (group) {
+    await prisma.groupMember.upsert({
+      where: {
+        groupId_userId: { groupId: group.id, userId: admin.id },
+      },
+      update: {},
+      create: { groupId: group.id, userId: admin.id },
+    });
+  }
+
+  const eventTitle = '青年聚會（階段三示範）';
+  let demoEvent = await prisma.event.findFirst({ where: { title: eventTitle } });
+  if (!demoEvent) {
+    const start = new Date();
+    start.setDate(start.getDate() + 10);
+    start.setHours(19, 30, 0, 0);
+    demoEvent = await prisma.event.create({
+      data: {
+        title: eventTitle,
+        description: '示範活動：報名後可用動態 QR 簽到。',
+        location: '副堂',
+        startAt: start,
+        capacity: 50,
+        createdBy: admin.id,
+      },
+    });
+  }
+
+  const privatePrayer = await prisma.prayerRequest.findFirst({
+    where: { content: '為教會全家代禱（種子私人）' },
+  });
+  if (!privatePrayer) {
+    await prisma.prayerRequest.create({
+      data: {
+        authorId: admin.id,
+        content: '為教會全家代禱（種子私人）',
+        visibility: 'PRIVATE',
+        isAnonymous: false,
+        moderationStatus: 'APPROVED',
+        sensitiveCategory: 'NONE',
+      },
+    });
+  }
+
+  console.log('Seed 完成（含 Phase 3 示範）：', {
     admin: admin.email,
     area: area.name,
     articles: articles.length,
+    event: demoEvent.title,
+    group: group?.name,
   });
 }
 

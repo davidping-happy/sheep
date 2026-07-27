@@ -109,10 +109,25 @@ export default function EventsScreen() {
   async function checkin() {
     if (!checkinEvent || !token.trim()) return;
     setBusyId(checkinEvent.id);
+    setError('');
+    let raw = token.trim();
+    let eventId = checkinEvent.id;
+    // 支援掃 QR 後貼上完整 payload：{"e":"eventId","t":"token"}
+    if (raw.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(raw) as { e?: string; t?: string };
+        if (parsed.e && parsed.t) {
+          eventId = parsed.e;
+          raw = parsed.t;
+        }
+      } catch {
+        /* 當作純 token */
+      }
+    }
     try {
-      await api(`/events/${checkinEvent.id}/checkin`, {
+      await api(`/events/${eventId}/checkin`, {
         method: 'POST',
-        body: JSON.stringify({ token: token.trim() }),
+        body: JSON.stringify({ token: raw }),
       });
       setInfo(`${checkinEvent.title}：簽到成功`);
       setCheckinEvent(null);
@@ -218,13 +233,13 @@ export default function EventsScreen() {
               簽到 — {checkinEvent?.title}
             </Text>
             <Text style={styles.meta}>
-              請輸入同工螢幕上的動態簽到碼（約 30 秒更新）
+              請掃描同工螢幕 QR，或貼上／輸入動態簽到碼（約 30 秒更新；須已報名）
             </Text>
             <TextInput
               style={styles.input}
               value={token}
               onChangeText={setToken}
-              placeholder="簽到碼"
+              placeholder="簽到碼或 QR payload"
               autoCapitalize="none"
             />
             <View style={styles.actions}>

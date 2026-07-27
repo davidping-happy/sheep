@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -26,11 +27,10 @@ import {
 const ANON_DISPLAY = '一位弟兄姊妹';
 
 /**
- * 7. 禱告代禱牆 — 隱私與內容審核為第一優先 (§6.2)。
- *  - 預設 PRIVATE
- *  - 公開內容須經人工審核 (moderationStatus)
- *  - 匿名貼文的真實身份加密後另存 PrayerAnonymityMap，存取須稽核
- *  - 危機類內容 (自傷/家暴/精神危機) 不公開曝光，escalated 通報牧者
+ * 7. 禱告代禱牆 — 隱私與內容審核為第一優先 (§6.2 / 階段三)。
+ *  - 預設 PRIVATE（僅作者＋代禱／牧區同工）
+ *  - GROUP：須為小組成員；PUBLIC：發布前人工審核
+ *  - 匿名貼文真實身份加密另表；危機內容不公開並稽核通報
  */
 @Injectable()
 export class PrayerService {
@@ -47,7 +47,26 @@ export class PrayerService {
     const sensitiveCategory = detectSensitiveCategory(dto.content);
     const crisis = isCrisisCategory(sensitiveCategory);
 
-    // 公開內容需人工審核；私人/小組可見可略過以加快流通 (§6.2 選項一)
+    let sharedGroupId: string | null = null;
+    if (visibility === Visibility.GROUP) {
+      if (!dto.sharedGroupId) {
+        throw new BadRequestException('小組可見須指定 sharedGroupId');
+      }
+      const membership = await this.prisma.groupMember.findUnique({
+        where: {
+          groupId_userId: {
+            groupId: dto.sharedGroupId,
+            userId: user.id,
+          },
+        },
+      });
+      if (!membership) {
+        throw new ForbiddenException('只能分享到自己所屬的小組');
+      }
+      sharedGroupId = dto.sharedGroupId;
+    }
+
+    // 公開內容需人工審核；私人/小組可見可略過 (§6.2 選項一)
     const moderationStatus =
       visibility === Visibility.PUBLIC
         ? ModerationStatus.PENDING
@@ -58,19 +77,21 @@ export class PrayerService {
         authorId: user.id,
         content: dto.content,
         visibility,
-        sharedGroupId:
-          visibility === Visibility.GROUP ? dto.sharedGroupId : null,
+        sharedGroupId,
         isAnonymous: dto.isAnonymous ?? false,
         sensitiveCategory,
-        // 危機內容強制不公開、標記待關懷同工處理
         moderationStatus: crisis
           ? ModerationStatus.AUTO_FLAGGED
           : moderationStatus,
         escalated: crisis,
+        // 公開牆預設 30 天後可封存（延伸；排程另接）
+        archiveAt:
+          visibility === Visibility.PUBLIC
+            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            : null,
       },
     });
 
-    // 匿名貼文：真實身份加密後另表儲存（供濫用稽核）
     if (dto.isAnonymous) {
       await this.prisma.prayerAnonymityMap.create({
         data: {
@@ -81,24 +102,47 @@ export class PrayerService {
     }
 
     if (crisis) {
-      // TODO: 串接通知服務，優先通報 PASTORAL_CARE / 牧者，而非公開曝光
       this.logger.warn(
-        `[危機通報] prayerRequest=${request.id} category=${sensitiveCategory} 已標記待關懷同工處理`,
+        `[危機通報] prayerRequest=${request.id} category=${sensitiveCategory}`,
       );
+      await this.audit.log({
+        actorId: user.id,
+        action: 'PRAYER_CRISIS_ESCALATE',
+        targetType: 'PrayerRequest',
+        targetId: request.id,
+        metadata: { category: sensitiveCategory },
+      });
     }
 
-    return this.toPublicView(request, user);
+    return this.toPublicView(request, user, { responseCount: 0, iPrayed: false });
   }
 
   /** 依可見範圍與審核狀態回傳可見清單 */
   async feed(user: AuthUser) {
     const myGroupIds = await this.myGroupIds(user.id);
+    const isCareStaff =
+      user.role === Role.STAFF || user.role === Role.ADMIN;
+
     const requests = await this.prisma.prayerRequest.findMany({
       where: {
         takenDownAt: null,
         archivedAt: null,
         OR: [
           { authorId: user.id },
+          // 設計：私人＝作者＋代禱／牧區同工
+          ...(isCareStaff
+            ? [
+                {
+                  visibility: Visibility.PRIVATE,
+                  moderationStatus: {
+                    in: [
+                      ModerationStatus.APPROVED,
+                      ModerationStatus.AUTO_FLAGGED,
+                    ],
+                  },
+                },
+              ]
+            : []),
           {
             visibility: Visibility.PUBLIC,
             moderationStatus: ModerationStatus.APPROVED,
@@ -106,24 +150,41 @@ export class PrayerService {
           {
             visibility: Visibility.GROUP,
             sharedGroupId: { in: myGroupIds },
+            moderationStatus: {
+              in: [ModerationStatus.APPROVED, ModerationStatus.AUTO_FLAGGED],
+            },
           },
         ],
       },
+      include: {
+        _count: { select: { responses: true } },
+        responses: {
+          where: { userId: user.id },
+          select: { id: true },
+          take: 1,
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
-    return requests.map((r) => this.toPublicView(r, user));
+
+    return requests.map((r) =>
+      this.toPublicView(r, user, {
+        responseCount: r._count.responses,
+        iPrayed: r.responses.length > 0,
+      }),
+    );
   }
 
-  /** 審核佇列（同工 / 代禱牆管理同工） */
   async moderationQueue(user: AuthUser) {
     this.assertModerator(user);
     return this.prisma.prayerRequest.findMany({
       where: {
+        takenDownAt: null,
         moderationStatus: {
           in: [ModerationStatus.PENDING, ModerationStatus.AUTO_FLAGGED],
         },
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ escalated: 'desc' }, { createdAt: 'asc' }],
     });
   }
 
@@ -148,10 +209,6 @@ export class PrayerService {
     return updated;
   }
 
-  /**
-   * 揭露匿名貼文的真實身份（僅濫用稽核時）。
-   * 最高敏感操作：限管理員 + 必留稽核紀錄 (§6.2 / §四.9)。
-   */
   async revealAnonymity(user: AuthUser, id: string) {
     if (user.role !== Role.ADMIN) {
       throw new ForbiddenException('僅系統管理員可執行匿名身份稽核');
@@ -162,6 +219,10 @@ export class PrayerService {
     if (!map) throw new NotFoundException('此貼文非匿名或無對應紀錄');
 
     const realUserId = this.crypto.decrypt(map.realUserIdEncrypted);
+    const realUser = await this.prisma.user.findUnique({
+      where: { id: realUserId },
+      select: { id: true, displayName: true, email: true },
+    });
     await this.audit.log({
       actorId: user.id,
       action: 'PRAYER_ANONYMITY_REVEAL',
@@ -169,12 +230,20 @@ export class PrayerService {
       targetId: id,
       metadata: { revealedUserId: realUserId },
     });
-    return { prayerRequestId: id, realUserId };
+    return {
+      prayerRequestId: id,
+      realUserId,
+      displayName: realUser?.displayName ?? null,
+      email: realUser?.email ?? null,
+    };
   }
 
   async respond(user: AuthUser, id: string, dto: RespondPrayerDto) {
+    await this.assertCanView(user, id);
     return this.prisma.prayerResponse.upsert({
-      where: { prayerRequestId_userId: { prayerRequestId: id, userId: user.id } },
+      where: {
+        prayerRequestId_userId: { prayerRequestId: id, userId: user.id },
+      },
       create: {
         prayerRequestId: id,
         userId: user.id,
@@ -185,6 +254,7 @@ export class PrayerService {
   }
 
   async report(user: AuthUser, id: string, reason?: string) {
+    await this.assertCanView(user, id);
     await this.prisma.prayerReport.create({
       data: { prayerRequestId: id, reporterId: user.id, reason },
     });
@@ -192,10 +262,16 @@ export class PrayerService {
       where: { id },
       data: { reportCount: { increment: 1 } },
     });
+    await this.audit.log({
+      actorId: user.id,
+      action: 'PRAYER_REPORT',
+      targetType: 'PrayerRequest',
+      targetId: id,
+      metadata: { reason },
+    });
     return { reported: true };
   }
 
-  /** 發文者自行下架（§6.2 保留刪除/下架機制） */
   async takeDown(user: AuthUser, id: string) {
     const req = await this.prisma.prayerRequest.findUnique({ where: { id } });
     if (!req) throw new NotFoundException();
@@ -210,8 +286,7 @@ export class PrayerService {
 
   private assertModerator(user: AuthUser) {
     if (user.role !== Role.STAFF && user.role !== Role.ADMIN) {
-      // TODO: 另判斷 SpecialAssignment.PRAYER_WALL_MODERATOR
-      throw new ForbiddenException('僅代禱牆管理同工可審核');
+      throw new ForbiddenException('僅代禱牆管理同工／牧區同工可審核');
     }
   }
 
@@ -223,16 +298,62 @@ export class PrayerService {
     return memberships.map((m) => m.groupId);
   }
 
-  /** 依匿名設定決定回傳的作者顯示名稱（不洩漏真實身份） */
+  private async assertCanView(user: AuthUser, id: string) {
+    const req = await this.prisma.prayerRequest.findUnique({ where: { id } });
+    if (!req || req.takenDownAt) throw new NotFoundException();
+    if (req.authorId === user.id) return req;
+
+    const isCareStaff =
+      user.role === Role.STAFF || user.role === Role.ADMIN;
+    if (
+      req.visibility === Visibility.PRIVATE &&
+      isCareStaff &&
+      (req.moderationStatus === ModerationStatus.APPROVED ||
+        req.moderationStatus === ModerationStatus.AUTO_FLAGGED)
+    ) {
+      return req;
+    }
+    if (
+      req.visibility === Visibility.PUBLIC &&
+      req.moderationStatus === ModerationStatus.APPROVED
+    ) {
+      return req;
+    }
+    if (req.visibility === Visibility.GROUP && req.sharedGroupId) {
+      const m = await this.prisma.groupMember.findUnique({
+        where: {
+          groupId_userId: {
+            groupId: req.sharedGroupId,
+            userId: user.id,
+          },
+        },
+      });
+      if (m) return req;
+    }
+    throw new ForbiddenException('無權檢視此代禱事項');
+  }
+
   private toPublicView(
     req: { authorId: string; isAnonymous: boolean } & Record<string, unknown>,
     viewer: AuthUser,
+    extra: { responseCount: number; iPrayed: boolean },
   ) {
     const isOwner = req.authorId === viewer.id;
+    const { _count, responses, ...rest } = req as typeof req & {
+      _count?: unknown;
+      responses?: unknown;
+    };
     return {
-      ...req,
+      ...rest,
       authorId: req.isAnonymous && !isOwner ? null : req.authorId,
-      authorDisplay: req.isAnonymous ? ANON_DISPLAY : undefined,
+      authorDisplay: req.isAnonymous
+        ? ANON_DISPLAY
+        : isOwner
+          ? '我'
+          : '會友',
+      isOwner,
+      responseCount: extra.responseCount,
+      iPrayed: extra.iPrayed,
     };
   }
 }

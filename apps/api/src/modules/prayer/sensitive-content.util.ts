@@ -21,6 +21,14 @@ const RULES: { category: SensitiveCategory; keywords: string[] }[] = [
     category: SensitiveCategory.MENTAL_HEALTH_CRISIS,
     keywords: ['憂鬱', '崩潰', '恐慌', '想不開'],
   },
+  {
+    category: SensitiveCategory.INVOLVES_THIRD_PARTY,
+    keywords: ['幫他代禱', '為她求', '別人的事', '第三人'],
+  },
+  {
+    category: SensitiveCategory.INVOLVES_MINOR,
+    keywords: ['未成年', '小孩姓名', '國小生', '國中生'],
+  },
 ];
 
 export function detectSensitiveCategory(content: string): SensitiveCategory {

@@ -18,10 +18,7 @@ import { CreateEventDto, RegisterEventDto } from './dto/event.dto';
 const QR_TTL_SECONDS = 30; // 動態 QR Code 每 30 秒輪替 (§6.1)
 
 /**
- * 6. 活動報名與簽到 (§6.1)。
- *  - 報名即時扣名額，額滿轉候補 (WAITLISTED)
- *  - 簽到採短效期動態 Token，避免截圖重用
- *  - 出席名單僅主辦同工/管理員可查（行蹤資料，§四.8）
+ * 6. 活動報名與簽到 (§6.1 / 階段三動態 QR)。
  */
 @Injectable()
 export class EventsService {
@@ -62,7 +59,6 @@ export class EventsService {
   async register(user: AuthUser, eventId: string, dto: RegisterEventDto) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
-      include: { _count: { select: { registrations: true } } },
     });
     if (!event) throw new NotFoundException();
     if (event.registerDeadline && event.registerDeadline < new Date()) {
@@ -75,7 +71,6 @@ export class EventsService {
     const activeCount = await this.prisma.eventRegistration.count({
       where: { eventId, status: RegistrationStatus.REGISTERED },
     });
-    // 額滿轉候補
     const status =
       event.capacity != null && activeCount >= event.capacity
         ? RegistrationStatus.WAITLISTED
@@ -100,25 +95,74 @@ export class EventsService {
     });
   }
 
-  /** 產生當前有效的動態簽到 Token（同工在現場螢幕輪播） */
+  /** 產生動態簽到 Token；使舊 token 立即失效，避免截圖重用 */
   async issueCheckinToken(user: AuthUser, eventId: string) {
     await this.assertOrganizer(user, eventId);
+    const now = new Date();
+    await this.prisma.checkinToken.deleteMany({
+      where: { eventId, expiresAt: { lt: now } },
+    });
+    // 將尚未過期的舊碼提前失效
+    await this.prisma.checkinToken.updateMany({
+      where: { eventId, expiresAt: { gte: now } },
+      data: { expiresAt: now },
+    });
+
     const token = randomBytes(16).toString('base64url');
     const expiresAt = new Date(Date.now() + QR_TTL_SECONDS * 1000);
     await this.prisma.checkinToken.create({
       data: { eventId, token, expiresAt },
     });
-    return { token, expiresAt, ttlSeconds: QR_TTL_SECONDS };
+
+    // App／QR 可掃的 payload（含 eventId，掃一次即可簽到）
+    const payload = JSON.stringify({ e: eventId, t: token });
+    return {
+      token,
+      eventId,
+      payload,
+      expiresAt,
+      ttlSeconds: QR_TTL_SECONDS,
+    };
   }
 
-  /** 會友掃描 QR 後帶 token 簽到 */
+  /** 會友掃描／輸入動態碼簽到（須已報名且狀態為 REGISTERED） */
   async checkin(user: AuthUser, eventId: string, token: string) {
+    let resolvedToken = token.trim();
+    let resolvedEventId = eventId;
+    // 支援掃 QR payload：{"e":"...","t":"..."}
+    if (resolvedToken.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(resolvedToken) as { e?: string; t?: string };
+        if (parsed.e && parsed.t) {
+          resolvedEventId = parsed.e;
+          resolvedToken = parsed.t;
+        }
+      } catch {
+        /* 當作純 token */
+      }
+    }
+    if (resolvedEventId !== eventId) {
+      throw new BadRequestException('簽到碼與活動不符');
+    }
+
     const record = await this.prisma.checkinToken.findUnique({
-      where: { token },
+      where: { token: resolvedToken },
     });
-    if (!record || record.eventId !== eventId || record.expiresAt < new Date()) {
+    if (
+      !record ||
+      record.eventId !== eventId ||
+      record.expiresAt < new Date()
+    ) {
       throw new BadRequestException('簽到碼無效或已過期');
     }
+
+    const reg = await this.prisma.eventRegistration.findUnique({
+      where: { eventId_userId: { eventId, userId: user.id } },
+    });
+    if (!reg || reg.status !== RegistrationStatus.REGISTERED) {
+      throw new BadRequestException('請先完成報名後再簽到');
+    }
+
     return this.prisma.eventCheckin.upsert({
       where: { eventId_userId: { eventId, userId: user.id } },
       create: {
@@ -130,7 +174,7 @@ export class EventsService {
     });
   }
 
-  /** 出席名單：行蹤資料，僅主辦同工/管理員 + 稽核 (§四.8 / §四.9) */
+  /** 出席名單：含簽到狀態（行蹤資料，僅主辦同工/管理員） */
   async roster(user: AuthUser, eventId: string) {
     await this.assertOrganizer(user, eventId);
     await this.audit.log({
@@ -139,11 +183,30 @@ export class EventsService {
       targetType: 'Event',
       targetId: eventId,
     });
-    return this.prisma.eventRegistration.findMany({
-      where: { eventId },
-      include: {
-        user: { select: { id: true, displayName: true, phone: true } },
-      },
+
+    const [regs, checkins] = await Promise.all([
+      this.prisma.eventRegistration.findMany({
+        where: { eventId },
+        include: {
+          user: { select: { id: true, displayName: true, phone: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.eventCheckin.findMany({
+        where: { eventId },
+        select: { userId: true, checkedInAt: true, method: true },
+      }),
+    ]);
+
+    const checkinMap = new Map(checkins.map((c) => [c.userId, c]));
+    return regs.map((r) => {
+      const c = checkinMap.get(r.userId);
+      return {
+        ...r,
+        checkedIn: !!c,
+        checkedInAt: c?.checkedInAt ?? null,
+        checkinMethod: c?.method ?? null,
+      };
     });
   }
 

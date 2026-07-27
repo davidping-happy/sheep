@@ -19,47 +19,77 @@ interface PrayerItem {
   isAnonymous: boolean;
   authorDisplay?: string;
   authorId: string | null;
+  isOwner?: boolean;
   sensitiveCategory: string;
   escalated: boolean;
+  responseCount?: number;
+  iPrayed?: boolean;
   createdAt: string;
+}
+
+interface GroupOption {
+  id: string;
+  name: string;
+  areaName: string;
 }
 
 type Visibility = 'PRIVATE' | 'GROUP' | 'PUBLIC';
 
 /**
- * 代禱牆：瀏覽 feed、發布（預設私人）、可選公開／匿名。
- * 公開內容需後台審核後才會出現在他人 feed。
+ * 階段三代禱牆：私人／小組／公開、匿名、我已代禱、檢舉。
+ * 公開內容需後台審核；私人對代禱同工可見。
  */
 export default function PrayerScreen() {
   const [items, setItems] = useState<PrayerItem[]>([]);
+  const [groups, setGroups] = useState<GroupOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [content, setContent] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('PRIVATE');
+  const [sharedGroupId, setSharedGroupId] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [posting, setPosting] = useState(false);
   const [info, setInfo] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError('');
     try {
-      const data = await api<PrayerItem[]>('/prayer/feed');
+      const [data, areas] = await Promise.all([
+        api<PrayerItem[]>('/prayer/feed'),
+        api<{ id: string; name: string; groups: { id: string; name: string }[] }[]>(
+          '/groups/areas',
+        ),
+      ]);
       setItems(data);
+      const opts: GroupOption[] = [];
+      for (const a of areas) {
+        for (const g of a.groups ?? []) {
+          opts.push({ id: g.id, name: g.name, areaName: a.name });
+        }
+      }
+      setGroups(opts);
+      if (!sharedGroupId && opts[0]) setSharedGroupId(opts[0].id);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '載入失敗');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [sharedGroupId]);
 
   useEffect(() => {
     load();
-  }, [load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function submit() {
     if (!content.trim()) return;
+    if (visibility === 'GROUP' && !sharedGroupId) {
+      setError('請選擇要分享的小組');
+      return;
+    }
     setPosting(true);
     setInfo('');
     setError('');
@@ -70,6 +100,7 @@ export default function PrayerScreen() {
           content: content.trim(),
           visibility,
           isAnonymous,
+          ...(visibility === 'GROUP' ? { sharedGroupId } : {}),
         }),
       });
       setContent('');
@@ -78,7 +109,11 @@ export default function PrayerScreen() {
       } else if (created.moderationStatus === 'AUTO_FLAGGED') {
         setInfo('已標記需關懷同工處理，不會公開曝光。');
       } else {
-        setInfo('已發布。');
+        setInfo(
+          visibility === 'PRIVATE'
+            ? '已發布（私人：僅你與代禱同工可見）。'
+            : '已發布。',
+        );
       }
       await load();
     } catch (e) {
@@ -89,11 +124,45 @@ export default function PrayerScreen() {
   }
 
   async function takeDown(id: string) {
+    setBusyId(id);
     try {
       await api(`/prayer/${id}/takedown`, { method: 'POST' });
       await load();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '下架失敗');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function respond(id: string) {
+    setBusyId(id);
+    try {
+      await api(`/prayer/${id}/respond`, {
+        method: 'POST',
+        body: JSON.stringify({ showIdentity: false }),
+      });
+      setInfo('已記錄你的代禱。');
+      await load();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '操作失敗');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function report(id: string) {
+    setBusyId(id);
+    try {
+      await api(`/prayer/${id}/report`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: '內容不當或不實' }),
+      });
+      setInfo('已送出檢舉，同工將複核。');
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '檢舉失敗');
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -118,14 +187,20 @@ export default function PrayerScreen() {
           textAlignVertical="top"
         />
         <View style={styles.row}>
-          {(['PRIVATE', 'PUBLIC'] as Visibility[]).map((v) => (
+          {(['PRIVATE', 'GROUP', 'PUBLIC'] as Visibility[]).map((v) => (
             <Pressable
               key={v}
               style={[styles.chip, visibility === v && styles.chipOn]}
               onPress={() => setVisibility(v)}
             >
-              <Text style={[styles.chipText, visibility === v && styles.chipTextOn]}>
-                {v === 'PRIVATE' ? '私人' : '公開（需審核）'}
+              <Text
+                style={[styles.chipText, visibility === v && styles.chipTextOn]}
+              >
+                {v === 'PRIVATE'
+                  ? '私人'
+                  : v === 'GROUP'
+                    ? '小組'
+                    : '公開（需審核）'}
               </Text>
             </Pressable>
           ))}
@@ -133,17 +208,50 @@ export default function PrayerScreen() {
             style={[styles.chip, isAnonymous && styles.chipOn]}
             onPress={() => setIsAnonymous((x) => !x)}
           >
-            <Text style={[styles.chipText, isAnonymous && styles.chipTextOn]}>
+            <Text
+              style={[styles.chipText, isAnonymous && styles.chipTextOn]}
+            >
               匿名
             </Text>
           </Pressable>
         </View>
+        {visibility === 'GROUP' ? (
+          <View style={styles.row}>
+            {groups.length === 0 ? (
+              <Text style={styles.metaHint}>
+                尚未加入小組，請先向同工申請入組。
+              </Text>
+            ) : (
+              groups.map((g) => (
+                <Pressable
+                  key={g.id}
+                  style={[
+                    styles.chip,
+                    sharedGroupId === g.id && styles.chipOn,
+                  ]}
+                  onPress={() => setSharedGroupId(g.id)}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      sharedGroupId === g.id && styles.chipTextOn,
+                    ]}
+                  >
+                    {g.areaName}/{g.name}
+                  </Text>
+                </Pressable>
+              ))
+            )}
+          </View>
+        ) : null}
         <Pressable
           style={[styles.postBtn, posting && { opacity: 0.6 }]}
           onPress={submit}
           disabled={posting}
         >
-          <Text style={styles.postBtnText}>{posting ? '送出中…' : '發布'}</Text>
+          <Text style={styles.postBtnText}>
+            {posting ? '送出中…' : '發布'}
+          </Text>
         </Pressable>
         {info ? <Text style={styles.info}>{info}</Text> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -163,7 +271,9 @@ export default function PrayerScreen() {
         }
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.empty}>尚無代禱事項。發布一則，或下拉重新整理。</Text>
+          <Text style={styles.empty}>
+            尚無代禱事項。發布一則，或下拉重新整理。
+          </Text>
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
@@ -171,23 +281,51 @@ export default function PrayerScreen() {
               <Text style={styles.author}>
                 {item.isAnonymous
                   ? item.authorDisplay ?? '一位弟兄姊妹'
-                  : '會友'}
+                  : item.authorDisplay ?? '會友'}
               </Text>
               <Text style={styles.badge}>{visLabel(item.visibility)}</Text>
               {item.moderationStatus !== 'APPROVED' ? (
                 <Text style={styles.badgeWarn}>{item.moderationStatus}</Text>
               ) : null}
+              {item.escalated ? (
+                <Text style={styles.badgeDanger}>關懷中</Text>
+              ) : null}
             </View>
             <Text style={styles.body}>{item.content}</Text>
+            <Text style={styles.metaHint}>
+              {item.responseCount ?? 0} 人已代禱
+              {item.iPrayed ? ' · 你已代禱' : ''}
+            </Text>
             <View style={styles.footer}>
               <Text style={styles.time}>
                 {new Date(item.createdAt).toLocaleString()}
               </Text>
-              {item.authorId ? (
-                <Pressable onPress={() => takeDown(item.id)}>
-                  <Text style={styles.takedown}>下架</Text>
-                </Pressable>
-              ) : null}
+              <View style={styles.row}>
+                {!item.iPrayed ? (
+                  <Pressable
+                    disabled={busyId === item.id}
+                    onPress={() => respond(item.id)}
+                  >
+                    <Text style={styles.action}>我已代禱</Text>
+                  </Pressable>
+                ) : null}
+                {!item.isOwner ? (
+                  <Pressable
+                    disabled={busyId === item.id}
+                    onPress={() => report(item.id)}
+                  >
+                    <Text style={styles.actionMuted}>檢舉</Text>
+                  </Pressable>
+                ) : null}
+                {item.isOwner ? (
+                  <Pressable
+                    disabled={busyId === item.id}
+                    onPress={() => takeDown(item.id)}
+                  >
+                    <Text style={styles.takedown}>下架</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
           </View>
         )}
@@ -221,7 +359,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 15,
   },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
   chip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -272,7 +410,17 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: 'hidden',
   },
+  badgeDanger: {
+    fontSize: 11,
+    color: '#b91c1c',
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
   body: { fontSize: 15, lineHeight: 22, color: '#1f2937' },
+  metaHint: { fontSize: 12, color: '#6b7280', marginTop: 6 },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -280,5 +428,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   time: { fontSize: 12, color: '#9ca3af' },
+  action: { fontSize: 13, color: '#4f46e5', fontWeight: '600' },
+  actionMuted: { fontSize: 13, color: '#6b7280' },
   takedown: { fontSize: 13, color: '#dc2626' },
 });
