@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { api, ApiError } from '../lib/api';
+import { theme } from '../theme';
 
 interface Announcement {
   id: string;
@@ -50,6 +51,7 @@ export default function AnnouncementsScreen() {
 
   return (
     <FlatList
+      style={styles.root}
       data={items}
       keyExtractor={(i) => i.id}
       contentContainerStyle={styles.list}
@@ -84,19 +86,30 @@ export default function AnnouncementsScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { padding: 16, paddingBottom: 32 },
+  root: { flex: 1, backgroundColor: theme.color.bg },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.color.bg,
+  },
+  list: { padding: 16, paddingBottom: 32, flexGrow: 1 },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: theme.color.bgElevated,
+    borderRadius: theme.radius.md,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.color.border,
     marginBottom: 12,
   },
-  title: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  meta: { fontSize: 12, color: '#9ca3af', marginTop: 4, marginBottom: 10 },
-  body: { fontSize: 15, lineHeight: 24, color: '#374151' },
-  empty: { textAlign: 'center', color: '#9ca3af', marginTop: 40 },
-  error: { color: '#dc2626', marginBottom: 8 },
+  title: { fontSize: 17, fontWeight: '700', color: theme.color.ink },
+  meta: {
+    fontSize: 12,
+    color: theme.color.inkMuted,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  body: { fontSize: 15, lineHeight: 24, color: theme.color.ink },
+  empty: { textAlign: 'center', color: theme.color.inkMuted, marginTop: 40 },
+  error: { color: theme.color.danger, marginBottom: 8 },
 });

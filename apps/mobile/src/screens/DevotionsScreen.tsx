@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { api, ApiError } from '../lib/api';
+import { theme } from '../theme';
 
 interface DevotionNote {
   id: string;
@@ -239,32 +240,37 @@ export default function DevotionsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f6f5f0' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  root: { flex: 1, backgroundColor: theme.color.bg },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.color.bg,
+  },
   toolbar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.color.bgElevated,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: theme.color.border,
   },
-  hint: { fontSize: 12, color: '#6b7280', flex: 1, marginRight: 8 },
+  hint: { fontSize: 12, color: theme.color.inkMuted, flex: 1, marginRight: 8 },
   addBtn: {
-    backgroundColor: '#4f46e5',
+    backgroundColor: theme.color.brand,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: theme.radius.sm,
   },
-  addBtnText: { color: '#fff', fontWeight: '600' },
+  addBtnText: { color: theme.color.brandInk, fontWeight: '600' },
   list: { padding: 16, paddingBottom: 40 },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: theme.color.bgElevated,
+    borderRadius: theme.radius.md,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.color.border,
     marginBottom: 10,
   },
   row: {
@@ -272,34 +278,41 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 6,
   },
-  date: { fontSize: 13, fontWeight: '600', color: '#4f46e5' },
-  del: { fontSize: 13, color: '#dc2626' },
-  ref: { fontSize: 13, color: '#6b7280', marginBottom: 4 },
-  preview: { fontSize: 15, lineHeight: 22, color: '#1f2937' },
-  empty: { textAlign: 'center', color: '#9ca3af', marginTop: 40 },
-  error: { color: '#dc2626', paddingHorizontal: 16, paddingTop: 8 },
+  date: { fontSize: 13, fontWeight: '600', color: theme.color.brand },
+  del: { fontSize: 13, color: theme.color.danger },
+  ref: { fontSize: 13, color: theme.color.inkMuted, marginBottom: 4 },
+  preview: { fontSize: 15, lineHeight: 22, color: theme.color.ink },
+  empty: { textAlign: 'center', color: theme.color.inkMuted, marginTop: 40 },
+  error: { color: theme.color.danger, paddingHorizontal: 16, paddingTop: 8 },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
   },
   modal: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: theme.color.bgElevated,
+    borderTopLeftRadius: theme.radius.md,
+    borderTopRightRadius: theme.radius.md,
     padding: 20,
     gap: 8,
     maxHeight: '90%',
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
-  label: { fontSize: 12, color: '#6b7280' },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: theme.color.ink,
+  },
+  label: { fontSize: 12, color: theme.color.inkMuted },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
+    borderColor: theme.color.border,
+    borderRadius: theme.radius.sm,
     padding: 10,
     fontSize: 15,
     marginBottom: 4,
+    color: theme.color.ink,
+    backgroundColor: theme.color.bgElevated,
   },
   textarea: { minHeight: 140 },
   modalActions: {
@@ -310,10 +323,10 @@ const styles = StyleSheet.create({
   },
   cancelBtn: { padding: 12 },
   saveBtn: {
-    backgroundColor: '#4f46e5',
+    backgroundColor: theme.color.brand,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: theme.radius.sm,
   },
-  saveBtnText: { color: '#fff', fontWeight: '600' },
+  saveBtnText: { color: theme.color.brandInk, fontWeight: '600' },
 });

@@ -36,9 +36,9 @@ interface CheckinTokenResult {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  REGISTERED: '已報名',
-  WAITLISTED: '候補',
-  CANCELLED: '已取消',
+  REGISTERED: '已報??,
+  WAITLISTED: '?��?',
+  CANCELLED: '已�?�?,
 };
 
 function toLocalInputValue(d: Date) {
@@ -59,7 +59,7 @@ export default function EventsPage() {
   const [autoRotate, setAutoRotate] = useState(false);
   const issuingRef = useRef(false);
 
-  // 建立活動表單
+  // 建�?活�?表單
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [startAt, setStartAt] = useState(() => {
@@ -78,7 +78,7 @@ export default function EventsPage() {
       const data = await apiFetch<EventItem[]>('/events', { token: jwt });
       setEvents(data);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '載入活動失敗');
+      setError(e instanceof ApiError ? e.message : '載入活�?失�?');
     } finally {
       setLoading(false);
     }
@@ -109,7 +109,7 @@ export default function EventsPage() {
       setLocation('');
       await loadEvents(auth.token);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '建立失敗');
+      setError(err instanceof ApiError ? err.message : '建�?失�?');
     } finally {
       setCreating(false);
     }
@@ -132,7 +132,7 @@ export default function EventsPage() {
       setError(
         e instanceof ApiError
           ? e.message
-          : '無法載入名單（僅主辦同工／管理員，且會寫入稽核）',
+          : '?��?載入?�單（�?主辦?�工／管?�員，�??�寫?�稽?��?',
       );
     } finally {
       setRosterLoading(false);
@@ -150,7 +150,7 @@ export default function EventsPage() {
       );
       setQr(data);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '產生簽到碼失敗');
+      setError(e instanceof ApiError ? e.message : '?��?簽到碼失??);
       setAutoRotate(false);
     } finally {
       issuingRef.current = false;
@@ -162,17 +162,17 @@ export default function EventsPage() {
     await issueQr();
   }
 
-  /** 名單匯出 CSV（含簽到） */
+  /** ?�單?�出 CSV（含簽到�?*/
   function exportRosterCsv() {
     if (!selected || roster.length === 0) return;
-    const header = ['姓名', '電話', '狀態', '監護人同意', '已簽到', '簽到時間'];
+    const header = ['姓�?', '?�話', '?�??, '??��人�???, '已簽??, '簽到?��?'];
     const lines = roster.map((r) =>
       [
         r.user.displayName,
         r.user.phone ?? '',
         STATUS_LABEL[r.status] ?? r.status,
-        r.guardianConsent ? '是' : '',
-        r.checkedIn ? '是' : '',
+        r.guardianConsent ? '?? : '',
+        r.checkedIn ? '?? : '',
         r.checkedInAt ? new Date(r.checkedInAt).toLocaleString() : '',
       ]
         .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
@@ -191,8 +191,8 @@ export default function EventsPage() {
   if (!auth.token) {
     return (
       <AdminLoginForm
-        title="活動報名簽到"
-        hint="需 STAFF 以上登入。出席名單屬行蹤資料，僅主辦同工／管理員可查（§6.1 / §四.8）。"
+        title="活�??��?簽到"
+        hint="?� STAFF 以�??�入?�出席�??�屬行蹤資�?，�?主辦?�工／管?�員?�查（�?.1 / §??8）�?
         auth={auth}
       />
     );
@@ -203,46 +203,46 @@ export default function EventsPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>活動報名簽到</h2>
+        <h2>活�??��?簽到</h2>
         <div style={{ display: 'flex', gap: 8 }}>
           <button style={ghostBtn} onClick={() => auth.token && loadEvents(auth.token)}>
-            重新整理
+            ?�新?��?
           </button>
           <button style={ghostBtn} onClick={auth.logout}>
-            登出
+            ?�出
           </button>
         </div>
       </div>
       <p className="muted">
-        建立活動、查看報名名單、產生現場動態簽到碼。查看名單會寫入稽核紀錄。
+        建�?活�??�查?�報?��??�、產?�現?��??�簽?�碼?�查?��??��?寫入稽核紀?��?
       </p>
 
       {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
 
       <form className="card" onSubmit={handleCreate}>
-        <h3>建立活動</h3>
+        <h3>建�?活�?</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
-            <label style={labelStyle}>活動名稱 *</label>
+            <label style={labelStyle}>活�??�稱 *</label>
             <input
               style={inputStyle}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              placeholder="例如：青年特會"
+              placeholder="例�?：�?年特??
             />
           </div>
           <div>
-            <label style={labelStyle}>地點</label>
+            <label style={labelStyle}>?��?</label>
             <input
               style={inputStyle}
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="大堂"
+              placeholder="大�?"
             />
           </div>
           <div>
-            <label style={labelStyle}>開始時間 *</label>
+            <label style={labelStyle}>?��??��? *</label>
             <input
               style={inputStyle}
               type="datetime-local"
@@ -252,14 +252,14 @@ export default function EventsPage() {
             />
           </div>
           <div>
-            <label style={labelStyle}>名額上限</label>
+            <label style={labelStyle}>?��?上�?</label>
             <input
               style={inputStyle}
               type="number"
               min={1}
               value={capacity}
               onChange={(e) => setCapacity(e.target.value)}
-              placeholder="不填則不限"
+              placeholder="不填?��???
             />
           </div>
         </div>
@@ -269,45 +269,45 @@ export default function EventsPage() {
             checked={requiresGuardian}
             onChange={(e) => setRequiresGuardian(e.target.checked)}
           />
-          兒少活動（報名需監護人同意）
+          ?��?活�?（報?��???��人�??��?
         </label>
         <button style={{ ...primaryBtn, width: 'auto', marginTop: 12 }} disabled={creating}>
-          {creating ? '建立中…' : '建立活動'}
+          {creating ? '建�?中�? : '建�?活�?'}
         </button>
       </form>
 
       <div className="card">
-        <h3>活動列表 {loading ? '（載入中…）' : `(${events.length})`}</h3>
+        <h3>活�??�表 {loading ? '（�??�中?��?' : `(${events.length})`}</h3>
         {events.length === 0 && !loading ? (
-          <p className="muted">尚無活動，請先上方建立一筆。</p>
+          <p className="muted">尚無活�?，�??��??�建立�?筆�?/p>
         ) : (
           <table style={tableStyle}>
             <thead>
               <tr>
-                <th style={thStyle}>名稱</th>
-                <th style={thStyle}>時間</th>
-                <th style={thStyle}>地點</th>
-                <th style={thStyle}>名額</th>
+                <th style={thStyle}>?�稱</th>
+                <th style={thStyle}>?��?</th>
+                <th style={thStyle}>?��?</th>
+                <th style={thStyle}>?��?</th>
                 <th style={thStyle}></th>
               </tr>
             </thead>
             <tbody>
               {events.map((ev) => (
-                <tr key={ev.id} style={selectedId === ev.id ? { background: '#eef2ff' } : undefined}>
+                <tr key={ev.id} style={selectedId === ev.id ? { background: '#f6e6de' } : undefined}>
                   <td style={tdStyle}>
                     {ev.title}
                     {ev.requiresGuardianConsent ? (
                       <span className="badge" style={{ marginLeft: 6 }}>
-                        兒少
+                        ?��?
                       </span>
                     ) : null}
                   </td>
                   <td style={tdStyle}>{new Date(ev.startAt).toLocaleString()}</td>
-                  <td style={tdStyle}>{ev.location ?? '—'}</td>
-                  <td style={tdStyle}>{ev.capacity ?? '不限'}</td>
+                  <td style={tdStyle}>{ev.location ?? '??}</td>
+                  <td style={tdStyle}>{ev.capacity ?? '不�?'}</td>
                   <td style={tdStyle}>
                     <button style={ghostBtn} onClick={() => openRoster(ev.id)}>
-                      查看名單
+                      ?��??�單
                     </button>
                   </td>
                 </tr>
@@ -320,16 +320,16 @@ export default function EventsPage() {
       {selectedId ? (
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3>出席／報名名單 — {selected?.title}</h3>
+            <h3>?�席／報?��?????{selected?.title}</h3>
             <button style={ghostBtn} onClick={() => setSelectedId(null)}>
-              關閉
+              ?��?
             </button>
           </div>
-          <p className="muted">此操作已寫入稽核（EVENT_ROSTER_VIEW）。</p>
+          <p className="muted">此�?作已寫入稽核（EVENT_ROSTER_VIEW）�?/p>
 
           <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button style={primaryBtnInline} onClick={startLiveQr}>
-              {autoRotate ? '重新產生動態 QR' : '開始現場動態 QR（自動輪替）'}
+              {autoRotate ? '?�新?��??��? QR' : '?��??�場?��? QR（自?�輪?��?'}
             </button>
             {autoRotate ? (
               <button
@@ -339,7 +339,7 @@ export default function EventsPage() {
                   setQr(null);
                 }}
               >
-                停止輪替
+                ?�止輪替
               </button>
             ) : null}
             <button
@@ -347,7 +347,7 @@ export default function EventsPage() {
               onClick={exportRosterCsv}
               disabled={roster.length === 0}
             >
-              匯出名單 CSV
+              ?�出?�單 CSV
             </button>
             {qr ? (
               <DynamicCheckinQr
@@ -362,25 +362,25 @@ export default function EventsPage() {
           </div>
 
           {rosterLoading ? (
-            <p className="muted">載入名單中…</p>
+            <p className="muted">載入?�單中�?/p>
           ) : roster.length === 0 ? (
-            <p className="muted">尚無人報名。</p>
+            <p className="muted">尚無人報?��?/p>
           ) : (
             <table style={tableStyle}>
               <thead>
                 <tr>
-                  <th style={thStyle}>姓名</th>
-                  <th style={thStyle}>電話</th>
-                  <th style={thStyle}>狀態</th>
+                  <th style={thStyle}>姓�?</th>
+                  <th style={thStyle}>?�話</th>
+                  <th style={thStyle}>?�??/th>
                   <th style={thStyle}>簽到</th>
-                  <th style={thStyle}>監護人同意</th>
+                  <th style={thStyle}>??��人�???/th>
                 </tr>
               </thead>
               <tbody>
                 {roster.map((row) => (
                   <tr key={row.id}>
                     <td style={tdStyle}>{row.user.displayName}</td>
-                    <td style={tdStyle}>{row.user.phone ?? '—'}</td>
+                    <td style={tdStyle}>{row.user.phone ?? '??}</td>
                     <td style={tdStyle}>
                       <span className="badge">
                         {STATUS_LABEL[row.status] ?? row.status}
@@ -389,16 +389,16 @@ export default function EventsPage() {
                     <td style={tdStyle}>
                       {row.checkedIn ? (
                         <span className="badge">
-                          已簽到
+                          已簽??
                           {row.checkedInAt
                             ? ` ${new Date(row.checkedInAt).toLocaleTimeString()}`
                             : ''}
                         </span>
                       ) : (
-                        '—'
+                        '??
                       )}
                     </td>
-                    <td style={tdStyle}>{row.guardianConsent ? '是' : '—'}</td>
+                    <td style={tdStyle}>{row.guardianConsent ? '?? : '??}</td>
                   </tr>
                 ))}
               </tbody>
@@ -427,7 +427,7 @@ const primaryBtn: React.CSSProperties = {
   marginTop: 16,
   width: '100%',
   padding: '10px',
-  background: '#4f46e5',
+  background: '#c46b4a',
   color: '#fff',
   border: 'none',
   borderRadius: 8,

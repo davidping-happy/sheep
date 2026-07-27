@@ -9,6 +9,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api, ApiError } from '../lib/api';
 import type { RootStackParamList } from '../App';
+import { theme } from '../theme';
 
 interface Article {
   id: string;
@@ -58,7 +59,7 @@ export default function ArticleDetailScreen({ route }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={styles.root} contentContainerStyle={styles.container}>
       <Text style={styles.title}>{article.title}</Text>
       <Text style={styles.meta}>
         {article.publishedAt
@@ -71,10 +72,26 @@ export default function ArticleDetailScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  container: { padding: 20, paddingBottom: 40 },
-  title: { fontSize: 22, fontWeight: '700', color: '#111827', marginBottom: 8 },
-  meta: { fontSize: 13, color: '#9ca3af', marginBottom: 20 },
-  body: { fontSize: 16, lineHeight: 28, color: '#374151' },
-  error: { color: '#dc2626' },
+  root: { flex: 1, backgroundColor: theme.color.bg },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.color.bg,
+  },
+  container: {
+    padding: 20,
+    paddingBottom: 40,
+    backgroundColor: theme.color.bg,
+    flexGrow: 1,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: theme.color.ink,
+    marginBottom: 8,
+  },
+  meta: { fontSize: 13, color: theme.color.inkMuted, marginBottom: 20 },
+  body: { fontSize: 16, lineHeight: 28, color: theme.color.ink },
+  error: { color: theme.color.danger },
 });

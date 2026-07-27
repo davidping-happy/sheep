@@ -11,6 +11,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api, ApiError } from '../lib/api';
 import type { RootStackParamList } from '../App';
+import { theme } from '../theme';
 
 interface ArticleSummary {
   id: string;
@@ -62,6 +63,7 @@ export default function ArticlesScreen({ navigation }: Props) {
 
   return (
     <FlatList
+      style={styles.root}
       data={items}
       keyExtractor={(i) => i.id}
       contentContainerStyle={styles.list}
@@ -101,29 +103,35 @@ export default function ArticlesScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { padding: 16, gap: 10, paddingBottom: 32 },
+  root: { flex: 1, backgroundColor: theme.color.bg },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.color.bg,
+  },
+  list: { padding: 16, gap: 10, paddingBottom: 32, flexGrow: 1 },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: theme.color.bgElevated,
+    borderRadius: theme.radius.md,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.color.border,
     marginBottom: 10,
   },
   badge: {
     alignSelf: 'flex-start',
     fontSize: 11,
-    color: '#4f46e5',
-    backgroundColor: '#eef2ff',
+    color: theme.color.brand,
+    backgroundColor: theme.color.brandSoft,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 999,
+    borderRadius: theme.radius.pill,
     overflow: 'hidden',
     marginBottom: 8,
   },
-  title: { fontSize: 16, fontWeight: '600', color: '#1f2937' },
-  meta: { marginTop: 6, fontSize: 12, color: '#9ca3af' },
-  empty: { textAlign: 'center', color: '#9ca3af', marginTop: 40 },
-  error: { color: '#dc2626', marginBottom: 8 },
+  title: { fontSize: 16, fontWeight: '600', color: theme.color.ink },
+  meta: { marginTop: 6, fontSize: 12, color: theme.color.inkMuted },
+  empty: { textAlign: 'center', color: theme.color.inkMuted, marginTop: 40 },
+  error: { color: theme.color.danger, marginBottom: 8 },
 });

@@ -9,6 +9,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api, ApiError } from '../lib/api';
 import type { RootStackParamList } from '../App';
+import { theme } from '../theme';
 
 interface GroupDetail {
   id: string;
@@ -60,7 +61,7 @@ export default function GroupDetailScreen({ route }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={styles.root} contentContainerStyle={styles.container}>
       <Text style={styles.area}>{group.pastoralArea.name}</Text>
       <Text style={styles.title}>{group.name}</Text>
       {group.intro ? <Text style={styles.intro}>{group.intro}</Text> : null}
@@ -88,20 +89,36 @@ export default function GroupDetailScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  container: { padding: 20, gap: 12 },
-  area: { fontSize: 13, color: '#4f46e5', fontWeight: '600' },
-  title: { fontSize: 24, fontWeight: '700', color: '#111827' },
-  intro: { fontSize: 16, lineHeight: 26, color: '#374151', marginVertical: 8 },
+  root: { flex: 1, backgroundColor: theme.color.bg },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.color.bg,
+  },
+  container: {
+    padding: 20,
+    gap: 12,
+    backgroundColor: theme.color.bg,
+    flexGrow: 1,
+  },
+  area: { fontSize: 13, color: theme.color.brand, fontWeight: '600' },
+  title: { fontSize: 24, fontWeight: '700', color: theme.color.ink },
+  intro: {
+    fontSize: 16,
+    lineHeight: 26,
+    color: theme.color.ink,
+    marginVertical: 8,
+  },
   block: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: theme.color.bgElevated,
+    borderRadius: theme.radius.md,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.color.border,
   },
-  label: { fontSize: 12, color: '#6b7280', marginBottom: 4 },
-  value: { fontSize: 16, color: '#111827' },
-  note: { fontSize: 12, color: '#9ca3af', marginTop: 8 },
-  error: { color: '#dc2626' },
+  label: { fontSize: 12, color: theme.color.inkMuted, marginBottom: 4 },
+  value: { fontSize: 16, color: theme.color.ink },
+  note: { fontSize: 12, color: theme.color.inkMuted, marginTop: 8 },
+  error: { color: theme.color.danger },
 });

@@ -24,13 +24,27 @@ async function main() {
   });
 
   let area = await prisma.pastoralArea.findFirst({
-    where: { name: '恩典牧區' },
+    where: { name: '成二牧區' },
   });
+  if (!area) {
+    const legacy = await prisma.pastoralArea.findFirst({
+      where: { name: '恩典牧區' },
+    });
+    if (legacy) {
+      area = await prisma.pastoralArea.update({
+        where: { id: legacy.id },
+        data: {
+          name: '成二牧區',
+          description: '成二牧區：歡迎新朋友認識小組生活，一起成為屬靈家庭。',
+        },
+      });
+    }
+  }
   if (!area) {
     area = await prisma.pastoralArea.create({
       data: {
-        name: '恩典牧區',
-        description: '第一階段示範牧區：歡迎新朋友認識小組生活。',
+        name: '成二牧區',
+        description: '成二牧區示範：歡迎新朋友認識小組生活，一起成為屬靈家庭。',
         groups: {
           create: [
             {

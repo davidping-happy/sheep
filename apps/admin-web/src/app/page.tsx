@@ -3,7 +3,7 @@ const MODULES = [
   { name: '主日崇拜 YouTube', desc: '最新影片預覽與嵌入播放', stage: '階段一 ✓', href: '/livestream' },
   { name: '靈修佳文 (CMS)', desc: '草稿、編輯、預覽、發布／下架', stage: '階段二 ✓', href: '/articles' },
   { name: '牧區・小組', desc: '目錄式介紹資料維護', stage: '階段一 ✓', href: '/groups' },
-  { name: '公告分眾推播', desc: '全教會／牧區／小組／角色（FCM stub）', stage: '階段二 ✓', href: '/announcements' },
+  { name: '公告分眾推播', desc: '全牧區／小組／角色（FCM stub）', stage: '階段二 ✓', href: '/announcements' },
   { name: '活動報名簽到', desc: '動態 QR 輪替、名單簽到狀態、CSV', stage: '階段三 ✓', href: '/events' },
   { name: '代禱牆審核', desc: '公開審核、危機標記、匿名稽核', stage: '階段三 ✓', href: '/prayer' },
 ];
@@ -11,11 +11,10 @@ const MODULES = [
 export default function DashboardPage() {
   return (
     <div>
-      <h2>總覽 — 階段一～三</h2>
+      <h2>總覽 — 成二牧區</h2>
       <p className="muted">
-        代禱牆與動態 QR 簽到已開通。種子帳號{' '}
-        <code>admin@church.local</code> / <code>ChangeMe123456</code>。說明見{' '}
-        <code>docs/phase3.md</code>。
+        溫馨家庭風後台。種子帳號{' '}
+        <code>admin@church.local</code> / <code>ChangeMe123456</code>。
       </p>
       <div className="grid">
         {MODULES.map((m) => (

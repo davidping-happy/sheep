@@ -3,7 +3,7 @@ import Link from 'next/link';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '教會 APP 管理後台',
+  title: '成二牧區 管理後台',
   description: '同工上稿・小組管理・活動報名・審核・推播',
 };
 
@@ -28,7 +28,8 @@ export default function RootLayout({
       <body>
         <div className="layout">
           <aside className="sidebar">
-            <h1 className="brand">教會 APP 後台</h1>
+            <h1 className="brand">成二牧區</h1>
+            <p className="brand-sub">管理後台 · 屬靈家庭</p>
             <nav>
               {NAV.map((item) => (
                 <Link key={item.href} href={item.href}>

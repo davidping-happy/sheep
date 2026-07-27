@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { api, ApiError } from '../lib/api';
+import { theme } from '../theme';
 
 interface VideoInfo {
   videoId: string;
@@ -67,7 +68,7 @@ export default function LivestreamScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={styles.root} contentContainerStyle={styles.container}>
       {video.source === 'demo' ? (
         <Text style={styles.demoBadge}>
           示範影片（請在 API .env 設定 YOUTUBE_API_KEY / YOUTUBE_CHANNEL_ID）
@@ -112,38 +113,50 @@ export default function LivestreamScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, gap: 12 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  root: { flex: 1, backgroundColor: theme.color.bg },
+  container: {
+    padding: 16,
+    gap: 12,
+    backgroundColor: theme.color.bg,
+    flexGrow: 1,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: theme.color.bg,
+  },
   demoBadge: {
-    backgroundColor: '#fef3c7',
-    color: '#92400e',
+    backgroundColor: theme.color.warnSoft,
+    color: theme.color.warn,
     padding: 10,
-    borderRadius: 8,
+    borderRadius: theme.radius.sm,
     fontSize: 13,
   },
-  title: { fontSize: 18, fontWeight: '700', color: '#1f2937' },
-  meta: { fontSize: 13, color: '#6b7280' },
+  title: { fontSize: 18, fontWeight: '700', color: theme.color.ink },
+  meta: { fontSize: 13, color: theme.color.inkMuted },
   player: {
     width: '100%',
     aspectRatio: 16 / 9,
     backgroundColor: '#000',
-    borderRadius: 12,
+    borderRadius: theme.radius.md,
     overflow: 'hidden',
   },
   thumbBox: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
+    backgroundColor: theme.color.ink,
+    borderRadius: theme.radius.md,
     padding: 24,
     gap: 8,
   },
-  playHint: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  link: { color: '#a5b4fc', fontSize: 12 },
+  playHint: { color: theme.color.brandInk, fontSize: 16, fontWeight: '600' },
+  link: { color: theme.color.brandSoft, fontSize: 12 },
   btn: {
-    backgroundColor: '#4f46e5',
-    borderRadius: 10,
+    backgroundColor: theme.color.brand,
+    borderRadius: theme.radius.sm,
     paddingVertical: 12,
     alignItems: 'center',
   },
-  btnText: { color: '#fff', fontWeight: '600' },
-  error: { color: '#dc2626' },
+  btnText: { color: theme.color.brandInk, fontWeight: '600' },
+  error: { color: theme.color.danger },
 });

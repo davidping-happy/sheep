@@ -8,8 +8,8 @@ interface LoginResult {
 }
 
 /**
- * 後台登入狀態（記憶體持有 token，不寫 localStorage，降低 XSS 風險）。
- * 各功能頁共用同一套登入表單與帳密預設值。
+ * 後台?�入?�?��?記憶體�???token，�?�?localStorage，�?�?XSS 風險）�?
+ * ?��??��??�用?��?套登?�表?��?帳�??�設?��?
  */
 export function useAdminAuth() {
   const [token, setToken] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export function useAdminAuth() {
         setLoginError(
           err instanceof ApiError
             ? err.message
-            : '登入失敗，請確認 API 是否啟動於 :3000',
+            : '?�入失�?，�?確�? API ?�否?��???:3000',
         );
       } finally {
         setLoggingIn(false);
@@ -75,7 +75,7 @@ export function AdminLoginForm({
         style={{ maxWidth: 360 }}
         onSubmit={(e) => auth.login(e)}
       >
-        <h3>登入</h3>
+        <h3>?�入</h3>
         <label style={labelStyle}>Email</label>
         <input
           style={inputStyle}
@@ -96,10 +96,10 @@ export function AdminLoginForm({
           <p style={{ color: '#dc2626', fontSize: 13 }}>{auth.loginError}</p>
         ) : null}
         <button style={primaryBtn} type="submit" disabled={auth.loggingIn}>
-          {auth.loggingIn ? '登入中…' : '登入'}
+          {auth.loggingIn ? '?�入中�? : '?�入'}
         </button>
         <p className="muted" style={{ marginTop: 8 }}>
-          種子帳號：admin@church.local / ChangeMe123456
+          種�?帳�?：admin@church.local / ChangeMe123456
         </p>
       </form>
     </div>
@@ -123,7 +123,7 @@ const primaryBtn: React.CSSProperties = {
   marginTop: 16,
   width: '100%',
   padding: '10px',
-  background: '#4f46e5',
+  background: '#c46b4a',
   color: '#fff',
   border: 'none',
   borderRadius: 8,

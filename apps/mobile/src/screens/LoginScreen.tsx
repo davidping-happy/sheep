@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../lib/api';
+import { theme } from '../theme';
 
 /**
  * 會友登入／註冊。Token 存入 SecureStore（Keychain/Keystore）。
@@ -53,9 +54,10 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.card}>
-        <Text style={styles.brand}>教會 APP</Text>
+        <Text style={styles.brand}>{theme.brandName}</Text>
+        <Text style={styles.tagline}>{theme.tagline}</Text>
         <Text style={styles.sub}>
-          {mode === 'login' ? '登入後使用代禱牆等個人化功能' : '註冊新會友帳號'}
+          {mode === 'login' ? '登入後與家人一起使用各項功能' : '註冊新會友帳號'}
         </Text>
 
         {mode === 'register' ? (
@@ -65,6 +67,7 @@ export default function LoginScreen() {
             value={displayName}
             onChangeText={setDisplayName}
             autoCapitalize="words"
+            placeholderTextColor={theme.color.inkMuted}
           />
         ) : null}
 
@@ -76,6 +79,7 @@ export default function LoginScreen() {
           autoCapitalize="none"
           keyboardType="email-address"
           autoComplete="email"
+          placeholderTextColor={theme.color.inkMuted}
         />
         <TextInput
           style={styles.input}
@@ -84,6 +88,7 @@ export default function LoginScreen() {
           onChangeText={setPassword}
           secureTextEntry
           autoComplete={mode === 'login' ? 'password' : 'new-password'}
+          placeholderTextColor={theme.color.inkMuted}
         />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -94,7 +99,7 @@ export default function LoginScreen() {
           disabled={busy}
         >
           {busy ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={theme.color.brandInk} />
           ) : (
             <Text style={styles.btnText}>
               {mode === 'login' ? '登入' : '註冊'}
@@ -112,11 +117,6 @@ export default function LoginScreen() {
             {mode === 'login' ? '還沒有帳號？註冊' : '已有帳號？登入'}
           </Text>
         </Pressable>
-
-        <Text style={styles.hint}>
-          後台同工帳號也可登入：admin@church.local{'\n'}
-          API 需在本機 :3000 運行
-        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -127,42 +127,58 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#f6f5f0',
+    backgroundColor: theme.color.bg,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: theme.color.bgElevated,
+    borderRadius: theme.radius.md,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.color.border,
     gap: 12,
   },
-  brand: { fontSize: 28, fontWeight: '700', color: '#1f2937' },
-  sub: { fontSize: 14, color: '#6b7280', marginBottom: 8 },
+  brand: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: theme.color.ink,
+  },
+  tagline: {
+    fontSize: 15,
+    color: theme.color.secondary,
+    marginTop: -4,
+  },
+  sub: { fontSize: 14, color: theme.color.inkMuted, marginBottom: 8 },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
+    borderColor: theme.color.border,
+    borderRadius: theme.radius.sm,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    minHeight: theme.tapMin,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.color.bgElevated,
+    color: theme.color.ink,
   },
   btn: {
-    backgroundColor: '#4f46e5',
-    borderRadius: 10,
+    backgroundColor: theme.color.brand,
+    borderRadius: theme.radius.sm,
     paddingVertical: 14,
+    minHeight: theme.tapMin,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 4,
   },
   btnDisabled: { opacity: 0.6 },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  btnText: {
+    color: theme.color.brandInk,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   switch: {
     textAlign: 'center',
-    color: '#4f46e5',
+    color: theme.color.brand,
     fontSize: 14,
     marginTop: 4,
   },
-  error: { color: '#dc2626', fontSize: 13 },
-  hint: { fontSize: 12, color: '#9ca3af', marginTop: 8, lineHeight: 18 },
+  error: { color: theme.color.danger, fontSize: 13 },
 });

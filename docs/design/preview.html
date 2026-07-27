@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>成二牧區 — 設計板預覽</title>
+  <style>
+    :root {
+      --bg: #ebe4dc;
+      --ink: #3d2c29;
+      --muted: #8a6e66;
+      --brand: #c46b4a;
+      --secondary: #6b8f71;
+      --line: #eadfd6;
+      --paper: #fbf6f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    header {
+      padding: 28px 24px 12px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    header h1 {
+      font-family: Georgia, "PMingLiU", serif;
+      font-size: 28px;
+      margin: 0 0 6px;
+      color: var(--ink);
+    }
+    header .tag {
+      color: var(--secondary);
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+    header p { margin: 0; color: var(--muted); line-height: 1.6; max-width: 720px; }
+    .swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 16px 24px;
+      max-width: 1400px;
+    }
+    .swatch {
+      width: 72px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .swatch i {
+      display: block;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      margin-bottom: 4px;
+    }
+    .hint {
+      margin: 8px 24px 16px;
+      max-width: 1400px;
+      padding: 12px 16px;
+      background: #fff8e6;
+      border: 1px solid #f0d78c;
+      border-radius: 10px;
+      color: #7a5b00;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .board {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 28px;
+      padding: 16px 24px 64px;
+      align-items: flex-start;
+    }
+    .frame {
+      flex: 0 0 auto;
+      width: min(320px, 92vw);
+    }
+    .frame label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .frame img {
+      width: 100%;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: #fff;
+      display: block;
+      min-height: 200px;
+    }
+    .frame .note {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .frame .err {
+      margin-top: 8px;
+      color: #b42318;
+      font-size: 13px;
+      display: none;
+    }
+    .ia {
+      max-width: 1400px;
+      margin: 0 auto 24px;
+      padding: 0 24px;
+    }
+    .ia pre {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-size: 13px;
+      overflow-x: auto;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      font-family: Consolas, "Courier New", monospace;
+    }
+    a { color: var(--brand); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>成二牧區</h1>
+    <p class="tag">我們的屬靈家庭</p>
+    <p>溫馨家庭風設計板。請用 Chrome／Edge 開啟；Cursor 內建預覽可能無法顯示圖片。</p>
+  </header>
+
+  <div class="swatches">
+    <div class="swatch"><i style="background:#FBF6F0"></i>暖紙</div>
+    <div class="swatch"><i style="background:#C46B4A"></i>陶土</div>
+    <div class="swatch"><i style="background:#6B8F71"></i>柔綠</div>
+    <div class="swatch"><i style="background:#3D2C29"></i>墨棕</div>
+    <div class="swatch"><i style="background:#F6E6DE"></i>淡陶</div>
+  </div>
+
+  <p class="hint">
+    預覽網址：<a href="http://localhost:5500/preview.html">http://localhost:5500/preview.html</a><br />
+    若打不開，在資料夾執行 <code>npx --yes serve -l 5500</code>
+  </p>
+
+  <section class="ia">
+    <pre>成二牧區 App
+登入 → 首頁樞紐
+  ├ 主日崇拜 · 代禱牆 · 活動簽到
+  ├ 晨禱筆記 · 靈修佳文
+  └ 牧區小組 · 最新資訊
+後台：CMS · 推播 · 審核 · 現場 QR</pre>
+  </section>
+
+  <div class="board">
+    <div class="frame">
+      <label>01 登入</label>
+      <img src="mockups/figma-login.png" alt="登入" onerror="this.nextElementSibling.style.display='block'" />
+      <p class="err">找不到圖片</p>
+      <p class="note">品牌「成二牧區」· 溫暖陶土主按鈕</p>
+    </div>
+    <div class="frame">
+      <label>02 首頁</label>
+      <img src="mockups/figma-home.png" alt="首頁" onerror="this.nextElementSibling.style.display='block'" />
+      <p class="err">找不到圖片</p>
+      <p class="note">家庭樞紐列表 · 大點擊區</p>
+    </div>
+    <div class="frame">
+      <label>03 主日崇拜</label>
+      <img src="mockups/figma-livestream.png" alt="主日崇拜" onerror="this.nextElementSibling.style.display='block'" />
+      <p class="err">找不到圖片</p>
+      <p class="note">影片為主</p>
+    </div>
+    <div class="frame">
+      <label>04 代禱牆</label>
+      <img src="mockups/figma-prayer.png" alt="代禱牆" onerror="this.nextElementSibling.style.display='block'" />
+      <p class="err">找不到圖片</p>
+      <p class="note">彼此守望</p>
+    </div>
+    <div class="frame">
+      <label>05 活動簽到</label>
+      <img src="mockups/figma-events.png" alt="活動簽到" onerror="this.nextElementSibling.style.display='block'" />
+      <p class="err">找不到圖片</p>
+      <p class="note">報名 → 簽到</p>
+    </div>
+  </div>
+</body>
+</html>
