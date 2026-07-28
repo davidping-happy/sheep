@@ -2,19 +2,42 @@
   "expo": {
     "name": "成二牧區",
     "slug": "churchsheep",
+    "owner": "davidping",
     "version": "1.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "churchsheep",
+    "icon": "./assets/icon.png",
+    "backgroundColor": "#FBF6F0",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "org.church.churchsheep"
     },
     "android": {
-      "package": "org.church.churchsheep"
+      "package": "org.church.churchsheep",
+      "versionCode": 1,
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#C46B4A"
+      }
     },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#FBF6F0"
+        }
+      ]
+    ],
     "extra": {
-      "apiBase": "http://10.75.32.231:3000/api"
+      "apiBase": "http://10.75.32.231:3000/api",
+      "eas": {
+        "projectId": "66020654-93b9-4ffc-8e1f-ef464b21acca"
+      }
     }
   }
 }

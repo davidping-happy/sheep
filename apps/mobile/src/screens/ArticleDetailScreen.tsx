@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api, ApiError } from '../lib/api';
-import type { RootStackParamList } from '../App';
+import type { HomeStackParamList } from '../navigation/types';
 import { theme } from '../theme';
 
 interface Article {
@@ -20,7 +20,7 @@ interface Article {
   publishedAt: string | null;
 }
 
-type Props = NativeStackScreenProps<RootStackParamList, 'ArticleDetail'>;
+type Props = NativeStackScreenProps<HomeStackParamList, 'ArticleDetail'>;
 
 export default function ArticleDetailScreen({ route }: Props) {
   const { slug } = route.params;

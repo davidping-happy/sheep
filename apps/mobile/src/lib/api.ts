@@ -1,23 +1,5 @@
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 import { tokenStore } from './secure-store';
-
-/**
- * API 位址：
- * - 網頁預覽（同電腦）：一律用 localhost，避免 CORS／區網 IP 問題
- * - 真機：用 app.json 的 extra.apiBase（區網 IP）
- */
-function resolveApiBase(): string {
-  if (Platform.OS === 'web') {
-    return 'http://localhost:3000/api';
-  }
-  return (
-    (Constants.expoConfig?.extra?.apiBase as string) ??
-    'http://localhost:3000/api'
-  );
-}
-
-const API_BASE = resolveApiBase();
+import { getApiBase } from './api-base';
 
 export class ApiError extends Error {
   constructor(
@@ -40,7 +22,8 @@ export async function api<T>(
   skipAuth = false,
 ): Promise<T> {
   const accessToken = skipAuth ? null : await tokenStore.getAccess();
-  const res = await fetch(`${API_BASE}${path}`, {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -137,4 +120,4 @@ export async function logoutRequest() {
   await tokenStore.clear();
 }
 
-export { API_BASE };
+export { getApiBase };

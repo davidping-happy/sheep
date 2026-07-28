@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api, ApiError } from '../lib/api';
-import type { RootStackParamList } from '../App';
+import type { HomeStackParamList } from '../navigation/types';
 import { theme } from '../theme';
 
 interface ArticleSummary {
@@ -28,7 +28,7 @@ const CAT: Record<string, string> = {
   OTHER: '其他',
 };
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Articles'>;
+type Props = NativeStackScreenProps<HomeStackParamList, 'Articles'>;
 
 export default function ArticlesScreen({ navigation }: Props) {
   const [items, setItems] = useState<ArticleSummary[]>([]);

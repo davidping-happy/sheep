@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api, ApiError } from '../lib/api';
-import type { RootStackParamList } from '../App';
+import type { HomeStackParamList } from '../navigation/types';
 import { theme } from '../theme';
 
 interface GroupDetail {
@@ -22,7 +22,7 @@ interface GroupDetail {
   pastoralArea: { id: string; name: string };
 }
 
-type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
+type Props = NativeStackScreenProps<HomeStackParamList, 'GroupDetail'>;
 
 export default function GroupDetailScreen({ route }: Props) {
   const { id } = route.params;

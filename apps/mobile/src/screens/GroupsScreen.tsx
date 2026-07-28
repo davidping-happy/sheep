@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api, ApiError } from '../lib/api';
-import type { RootStackParamList } from '../App';
+import type { HomeStackParamList } from '../navigation/types';
 import { theme } from '../theme';
 
 interface GroupBrief {
@@ -28,7 +28,7 @@ interface Area {
   groups: GroupBrief[];
 }
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Groups'>;
+type Props = NativeStackScreenProps<HomeStackParamList, 'Groups'>;
 
 export default function GroupsScreen({ navigation }: Props) {
   const [areas, setAreas] = useState<Area[]>([]);

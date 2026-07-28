@@ -1,43 +1,62 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../App';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FEATURES, FeatureIcon } from '../features';
 import { theme } from '../theme';
+import type { HomeStackParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
-
-const FEATURES: {
-  key: keyof RootStackParamList;
-  title: string;
-  desc: string;
-}[] = [
-  { key: 'Livestream', title: '主日崇拜', desc: '一起敬拜・直播／回放' },
-  { key: 'Prayer', title: '禱告代禱牆', desc: '彼此守望・關懷代禱' },
-  { key: 'Events', title: '活動報名簽到', desc: '聚會報名・現場簽到' },
-  { key: 'Devotions', title: '晨禱靈修筆記', desc: '每日與主親近' },
-  { key: 'Articles', title: '靈修佳文', desc: '每日靈糧・牧者專欄' },
-  { key: 'Groups', title: '牧區・小組', desc: '認識我們的小組家庭' },
-  { key: 'Announcements', title: '最新資訊', desc: '牧區公告與提醒' },
-];
+type Props = NativeStackScreenProps<HomeStackParamList, 'HomeMain'>;
 
 export default function HomeScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.hero}>{theme.brandName}</Text>
-      <Text style={styles.heroSub}>{theme.tagline}</Text>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={[
+        styles.container,
+        { paddingBottom: 24 + insets.bottom },
+      ]}
+    >
+      <Image
+        source={require('../../assets/brand/home-banner.png')}
+        style={styles.banner}
+        resizeMode="cover"
+      />
+
+      <View style={styles.brandBlock}>
+        <Text style={styles.hero}>{theme.brandName}</Text>
+        <Text style={styles.heroSub}>{theme.tagline}</Text>
+      </View>
+
       <View style={styles.list}>
         {FEATURES.map((f) => (
-          <TouchableOpacity
+          <Pressable
             key={f.key}
-            style={styles.row}
+            style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
             onPress={() => navigation.navigate(f.key as never)}
-            activeOpacity={0.7}
           >
+            <View style={[styles.iconCircle, { backgroundColor: f.color }]}>
+              <FeatureIcon
+                family={f.family}
+                name={f.icon}
+                color="#fff"
+                size={22}
+              />
+            </View>
             <View style={styles.rowText}>
               <Text style={styles.title}>{f.title}</Text>
               <Text style={styles.desc}>{f.desc}</Text>
             </View>
             <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
     </ScrollView>
@@ -45,42 +64,57 @@ export default function HomeScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: theme.space.md,
-    paddingBottom: 40,
-    backgroundColor: theme.color.bg,
-    flexGrow: 1,
+  root: { flex: 1, backgroundColor: theme.color.bg },
+  container: { paddingBottom: 24 },
+  banner: {
+    width: '100%',
+    height: 168,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  brandBlock: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
   hero: {
     fontSize: 28,
     fontWeight: '700',
     color: theme.color.ink,
-    marginTop: 8,
   },
   heroSub: {
     fontSize: 15,
     color: theme.color.secondary,
-    marginBottom: theme.space.lg,
     marginTop: 4,
   },
   list: {
-    backgroundColor: theme.color.bgElevated,
-    borderRadius: theme.radius.md,
+    marginHorizontal: 16,
+    marginTop: 8,
+    backgroundColor: '#fff',
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: theme.color.border,
     overflow: 'hidden',
   },
   row: {
-    minHeight: 64,
-    paddingHorizontal: theme.space.md,
-    paddingVertical: 14,
+    minHeight: 72,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.color.border,
+    gap: 12,
+  },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rowText: { flex: 1, gap: 2 },
-  title: { fontSize: 17, fontWeight: '600', color: theme.color.ink },
-  desc: { fontSize: 13, color: theme.color.inkMuted },
-  chevron: { fontSize: 22, color: theme.color.brand, paddingLeft: 8 },
+  title: { fontSize: 16, fontWeight: '700', color: theme.color.ink },
+  desc: { fontSize: 12, color: theme.color.inkMuted },
+  chevron: { fontSize: 24, color: theme.color.brand, paddingLeft: 4 },
 });
