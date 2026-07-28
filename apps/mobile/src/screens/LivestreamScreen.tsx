@@ -20,6 +20,8 @@ interface VideoInfo {
   watchUrl: string;
   thumbnailUrl?: string;
   source: 'youtube' | 'demo';
+  channelUrl?: string;
+  isThisWeek?: boolean;
 }
 
 /**
@@ -71,18 +73,21 @@ export default function LivestreamScreen() {
     <ScrollView style={styles.root} contentContainerStyle={styles.container}>
       {video.source === 'demo' ? (
         <Text style={styles.demoBadge}>
-          示範影片（請在 API .env 設定 YOUTUBE_API_KEY / YOUTUBE_CHANNEL_ID）
+          暫無法嵌入影片，請點下方開啟頻道觀看主日信息
         </Text>
-      ) : null}
+      ) : (
+        <Text style={styles.channelHint}>
+          高雄靈糧堂 · {video.isThisWeek ? '當週最新上架' : '近期最新上架'}
+        </Text>
+      )}
       <Text style={styles.title}>{video.title}</Text>
       <Text style={styles.meta}>
         {new Date(video.publishedAt).toLocaleString()}
       </Text>
 
-      {Platform.OS === 'web' ? (
+      {Platform.OS === 'web' && video.videoId ? (
         <View style={styles.player}>
           {typeof document !== 'undefined' ? (
-            // web iframe（Expo Web）
             <View style={{ flex: 1 }}>
               {/* eslint-disable-next-line react/no-unknown-property */}
               <iframe
@@ -106,8 +111,16 @@ export default function LivestreamScreen() {
       )}
 
       <Pressable style={styles.btn} onPress={() => Linking.openURL(video.watchUrl)}>
-        <Text style={styles.btnText}>在 YouTube 開啟</Text>
+        <Text style={styles.btnText}>在 YouTube 開啟本集</Text>
       </Pressable>
+      {video.channelUrl ? (
+        <Pressable
+          style={styles.ghostBtn}
+          onPress={() => Linking.openURL(video.channelUrl!)}
+        >
+          <Text style={styles.ghostBtnText}>開啟頻道（更多主日信息）</Text>
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }
@@ -134,6 +147,11 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
     fontSize: 13,
   },
+  channelHint: {
+    fontSize: 13,
+    color: theme.color.secondary,
+    fontWeight: '600',
+  },
   title: { fontSize: 18, fontWeight: '700', color: theme.color.ink },
   meta: { fontSize: 13, color: theme.color.inkMuted },
   player: {
@@ -155,8 +173,21 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.brand,
     borderRadius: theme.radius.sm,
     paddingVertical: 12,
+    minHeight: theme.tapMin,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   btnText: { color: theme.color.brandInk, fontWeight: '600' },
+  ghostBtn: {
+    borderWidth: 1,
+    borderColor: theme.color.border,
+    borderRadius: theme.radius.sm,
+    paddingVertical: 12,
+    minHeight: theme.tapMin,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.color.bgElevated,
+  },
+  ghostBtnText: { color: theme.color.brand, fontWeight: '600' },
   error: { color: theme.color.danger },
 });

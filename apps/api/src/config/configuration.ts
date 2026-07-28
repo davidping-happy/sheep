@@ -12,7 +12,10 @@ export default () => ({
   fieldEncryptionKey: process.env.FIELD_ENCRYPTION_KEY ?? '',
   youtube: {
     apiKey: process.env.YOUTUBE_API_KEY ?? '',
-    channelId: process.env.YOUTUBE_CHANNEL_ID ?? '',
+    channelId: process.env.YOUTUBE_CHANNEL_ID ?? 'UCdcDDnZj76AwNqj18jtTAgw',
+    channelUrl:
+      process.env.YOUTUBE_CHANNEL_URL ??
+      'https://www.youtube.com/@breadoflifechristianchurch9830',
   },
   fcm: {
     projectId: process.env.FCM_PROJECT_ID ?? '',

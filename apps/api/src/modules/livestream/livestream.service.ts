@@ -9,32 +9,50 @@ export interface VideoInfo {
   watchUrl: string;
   thumbnailUrl?: string;
   source: 'youtube' | 'demo';
+  channelUrl?: string;
+  /** 是否為當週上架 */
+  isThisWeek?: boolean;
 }
+
+interface RawVideo {
+  videoId: string;
+  title: string;
+  publishedAt: string;
+  thumbnailUrl?: string;
+}
+
+/** 高雄靈糧堂／成二牧區主日信息預設頻道 */
+const DEFAULT_CHANNEL_ID = 'UCdcDDnZj76AwNqj18jtTAgw';
+const DEFAULT_CHANNEL_URL =
+  'https://www.youtube.com/@breadoflifechristianchurch9830';
+
+const SUNDAY_HINT = /主崇|主日|崇拜|聚會直播/;
 
 /**
  * 2. 主日崇拜 YouTube 連結 (§二.2)。
- *  - YouTube Data API v3 抓頻道最新影片
- *  - 5 分鐘快取
- *  - 未設定 API Key 時回傳示範影片，方便本地 MVP 演示
+ *  以「當週最新上架」為主；當週無片則退回頻道最近一集。
  */
 @Injectable()
 export class LivestreamService {
   private readonly logger = new Logger(LivestreamService.name);
   private cache: { data: VideoInfo | null; at: number } = { data: null, at: 0 };
-  private readonly TTL_MS = 5 * 60 * 1000;
-
-  /** 示範用公開影片（官方 YouTube 說明頻道），無 API Key 時使用 */
-  private readonly DEMO: VideoInfo = {
-    videoId: 'aqz-KE-bpKQ',
-    title: '【示範】主日崇拜直播／回放（請於後端設定 YouTube API）',
-    publishedAt: new Date().toISOString(),
-    embedUrl: 'https://www.youtube.com/embed/aqz-KE-bpKQ',
-    watchUrl: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
-    thumbnailUrl: 'https://i.ytimg.com/vi/aqz-KE-bpKQ/hqdefault.jpg',
-    source: 'demo',
-  };
+  private readonly TTL_MS = 3 * 60 * 1000; // 3 分鐘，較快跟上新上架
 
   constructor(private readonly config: ConfigService) {}
+
+  private get channelId(): string {
+    return (
+      this.config.get<string>('youtube.channelId')?.trim() ||
+      DEFAULT_CHANNEL_ID
+    );
+  }
+
+  private get channelUrl(): string {
+    return (
+      this.config.get<string>('youtube.channelUrl')?.trim() ||
+      DEFAULT_CHANNEL_URL
+    );
+  }
 
   async getLatest(): Promise<VideoInfo> {
     if (this.cache.data && Date.now() - this.cache.at < this.TTL_MS) {
@@ -42,16 +60,78 @@ export class LivestreamService {
     }
 
     const apiKey = this.config.get<string>('youtube.apiKey')?.trim();
-    const channelId = this.config.get<string>('youtube.channelId')?.trim();
+    let list: RawVideo[] = [];
 
-    if (!apiKey || !channelId) {
-      this.logger.warn(
-        'YOUTUBE_API_KEY / YOUTUBE_CHANNEL_ID 未設定，回傳示範影片',
-      );
-      this.cache = { data: this.DEMO, at: Date.now() };
-      return this.DEMO;
+    if (apiKey) {
+      list = await this.listViaApi(apiKey, this.channelId);
+    }
+    if (list.length === 0) {
+      list = await this.listViaRss(this.channelId);
     }
 
+    const picked = this.pickThisWeekLatest(list);
+    const result = picked
+      ? this.toVideoInfo(picked.video, picked.isThisWeek)
+      : this.channelFallback();
+
+    if (picked) {
+      this.logger.log(
+        `主日信息：${picked.isThisWeek ? '當週最新' : '近期最新'} — ${picked.video.title}`,
+      );
+    }
+
+    this.cache = { data: result, at: Date.now() };
+    return result;
+  }
+
+  /** 當週（台北時間週一 00:00 起）最新上架；優先主日相關標題 */
+  private pickThisWeekLatest(
+    list: RawVideo[],
+  ): { video: RawVideo; isThisWeek: boolean } | null {
+    if (list.length === 0) return null;
+
+    const weekStart = this.taipeiWeekStart().getTime();
+    const thisWeek = list
+      .filter((v) => new Date(v.publishedAt).getTime() >= weekStart)
+      .sort(
+        (a, b) =>
+          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+      );
+
+    if (thisWeek.length > 0) {
+      const sunday = thisWeek.find((v) => SUNDAY_HINT.test(v.title));
+      return { video: sunday ?? thisWeek[0], isThisWeek: true };
+    }
+
+    // 當週尚無上架 → 頻道最近一集（已依日期排序）
+    const sorted = [...list].sort(
+      (a, b) =>
+        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+    );
+    return { video: sorted[0], isThisWeek: false };
+  }
+
+  /** 台北時間：本週一 00:00 */
+  private taipeiWeekStart(): Date {
+    const now = new Date();
+    const taipei = new Date(
+      now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }),
+    );
+    const day = taipei.getDay(); // 0=日 … 1=一
+    const daysFromMonday = (day + 6) % 7;
+    taipei.setHours(0, 0, 0, 0);
+    taipei.setDate(taipei.getDate() - daysFromMonday);
+    // 轉回近似 UTC：用 ISO 字串再 parse（足夠做週界比較）
+    const y = taipei.getFullYear();
+    const m = String(taipei.getMonth() + 1).padStart(2, '0');
+    const d = String(taipei.getDate()).padStart(2, '0');
+    return new Date(`${y}-${m}-${d}T00:00:00+08:00`);
+  }
+
+  private async listViaApi(
+    apiKey: string,
+    channelId: string,
+  ): Promise<RawVideo[]> {
     try {
       const url =
         'https://www.googleapis.com/youtube/v3/search?' +
@@ -59,17 +139,15 @@ export class LivestreamService {
           part: 'snippet',
           channelId,
           order: 'date',
-          maxResults: '1',
+          maxResults: '15',
           type: 'video',
           key: apiKey,
         }).toString();
 
       const res = await fetch(url);
       if (!res.ok) {
-        const text = await res.text();
-        this.logger.error(`YouTube API ${res.status}: ${text}`);
-        this.cache = { data: this.DEMO, at: Date.now() };
-        return this.DEMO;
+        this.logger.error(`YouTube API ${res.status}: ${await res.text()}`);
+        return [];
       }
 
       const json = (await res.json()) as {
@@ -83,31 +161,87 @@ export class LivestreamService {
         }>;
       };
 
-      const item = json.items?.[0];
-      if (!item?.id?.videoId) {
-        this.logger.warn('YouTube 頻道尚無影片，回傳示範');
-        this.cache = { data: this.DEMO, at: Date.now() };
-        return this.DEMO;
-      }
-
-      const videoId = item.id.videoId;
-      const result: VideoInfo = {
-        videoId,
-        title: item.snippet.title,
-        publishedAt: item.snippet.publishedAt,
-        embedUrl: `https://www.youtube.com/embed/${videoId}`,
-        watchUrl: `https://www.youtube.com/watch?v=${videoId}`,
-        thumbnailUrl:
-          item.snippet.thumbnails?.high?.url ??
-          item.snippet.thumbnails?.default?.url,
-        source: 'youtube',
-      };
-      this.cache = { data: result, at: Date.now() };
-      return result;
+      return (json.items ?? [])
+        .filter((i) => i.id?.videoId)
+        .map((i) => ({
+          videoId: i.id.videoId,
+          title: i.snippet.title,
+          publishedAt: i.snippet.publishedAt,
+          thumbnailUrl:
+            i.snippet.thumbnails?.high?.url ??
+            i.snippet.thumbnails?.default?.url,
+        }));
     } catch (e) {
-      this.logger.error(`YouTube 請求失敗: ${String(e)}`);
-      this.cache = { data: this.DEMO, at: Date.now() };
-      return this.DEMO;
+      this.logger.error(`YouTube API 失敗: ${String(e)}`);
+      return [];
     }
+  }
+
+  private async listViaRss(channelId: string): Promise<RawVideo[]> {
+    try {
+      const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        this.logger.error(`YouTube RSS ${res.status}`);
+        return [];
+      }
+      const xml = await res.text();
+      const entries = xml.match(/<entry>[\s\S]*?<\/entry>/g) ?? [];
+      const out: RawVideo[] = [];
+      for (const entry of entries) {
+        const videoId = entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1];
+        const title = entry.match(/<title>([^<]+)<\/title>/)?.[1];
+        const publishedAt = entry.match(
+          /<published>([^<]+)<\/published>/,
+        )?.[1];
+        if (!videoId || !title || !publishedAt) continue;
+        out.push({
+          videoId,
+          title: this.decodeXml(title),
+          publishedAt,
+          thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        });
+      }
+      return out;
+    } catch (e) {
+      this.logger.error(`YouTube RSS 失敗: ${String(e)}`);
+      return [];
+    }
+  }
+
+  private toVideoInfo(v: RawVideo, isThisWeek: boolean): VideoInfo {
+    return {
+      videoId: v.videoId,
+      title: v.title,
+      publishedAt: v.publishedAt,
+      embedUrl: `https://www.youtube.com/embed/${v.videoId}`,
+      watchUrl: `https://www.youtube.com/watch?v=${v.videoId}`,
+      thumbnailUrl: v.thumbnailUrl,
+      source: 'youtube',
+      channelUrl: this.channelUrl,
+      isThisWeek,
+    };
+  }
+
+  private channelFallback(): VideoInfo {
+    return {
+      videoId: '',
+      title: '高雄靈糧堂主日信息（請至頻道觀看）',
+      publishedAt: new Date().toISOString(),
+      embedUrl: this.channelUrl,
+      watchUrl: this.channelUrl,
+      source: 'demo',
+      channelUrl: this.channelUrl,
+      isThisWeek: false,
+    };
+  }
+
+  private decodeXml(s: string): string {
+    return s
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
   }
 }
