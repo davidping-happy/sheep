@@ -41,6 +41,11 @@ apps/mobile/.expo/
 apps/mobile/android/
 apps/mobile/ios/
 *.keystore
+*.apk
+*.aab
+
+# 本機下載的工具（cloudflared 等）
+tools/
 
 # Test / coverage
 coverage/

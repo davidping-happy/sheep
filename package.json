@@ -12,6 +12,8 @@
     "dev:api": "npm run start:dev --workspace apps/api",
     "dev:admin": "npm run dev --workspace apps/admin-web",
     "dev:mobile": "npm run start --prefix apps/mobile",
+    "public:api": "powershell -ExecutionPolicy Bypass -File scripts/start-public-api.ps1",
+    "apk": "npm run apk --prefix apps/mobile",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "prisma:generate": "npm run prisma:generate --workspace apps/api",
