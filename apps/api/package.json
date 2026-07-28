@@ -15,6 +15,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
+    "set-password": "ts-node scripts/set-password.ts",
     "demo": "node demo/demo.mjs",
     "demo:events": "node demo/demo-events.mjs",
     "demo:admin-prayer": "node demo/demo-admin-prayer.mjs",

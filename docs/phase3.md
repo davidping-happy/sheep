@@ -15,7 +15,7 @@
 
 ## 啟動
 
-同階段一／二。帳號：`admin@church.local` / `ChangeMe123456`
+同階段一／二。帳號：`admin@church.local`（密碼以 `npm run set-password` 設定）
 
 ```powershell
 cd apps\api

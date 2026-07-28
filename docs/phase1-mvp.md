@@ -34,7 +34,7 @@ npx expo start --web
 # http://localhost:8081
 ```
 
-帳號：`admin@church.local` / `ChangeMe123456`
+帳號：`admin@church.local`（密碼以 `npm run set-password` 設定）
 
 ## YouTube 正式頻道
 

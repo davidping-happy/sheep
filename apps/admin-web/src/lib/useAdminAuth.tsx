@@ -14,7 +14,7 @@ interface LoginResult {
 export function useAdminAuth() {
   const [token, setToken] = useState<string | null>(null);
   const [email, setEmail] = useState('admin@church.local');
-  const [password, setPassword] = useState('ChangeMe123456');
+  const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
 
@@ -63,7 +63,7 @@ export function AdminLoginForm({ title, hint, auth }: { title: string; hint: str
           {auth.loggingIn ? '登入中…' : '登入'}
         </button>
         <p className="muted" style={{ marginTop: 8 }}>
-          種子帳號：admin@church.local / ChangeMe123456
+          忘記密碼請執行 <code>npm run set-password</code>（apps/api）重設。
         </p>
       </form>
     </div>

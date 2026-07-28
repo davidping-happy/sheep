@@ -9,7 +9,8 @@ cp .env.example .env          # 已預設 SQLite；正式環境改 DATABASE_URL 
 npm install --no-workspaces   # 於此資料夾安裝
 npm run prisma:generate
 npm run prisma:push           # 建立 SQLite dev.db（demo 用；正式改 prisma:migrate）
-npm run seed                  # 建立初始管理員 admin@church.local / ChangeMe123456 與範例牧區
+npm run seed                  # 建立初始管理員 admin@church.local 與範例牧區
+npm run set-password          # 設定管理員密碼（API 對外開放前務必執行）
 npm run build && node dist/main.js   # http://localhost:3000/api  (Swagger: /docs)
 ```
 
@@ -41,7 +42,7 @@ npm install --no-workspaces
 npm run dev                  # http://localhost:3001/prayer
 ```
 
-用種子帳號 `admin@church.local` / `ChangeMe123456` 登入，即可對審核佇列按「核准」或「退回」。
+用管理員帳號 `admin@church.local` 登入（密碼以 `npm run set-password` 設定），即可對審核佇列按「核准」或「退回」。
 
 產生欄位加密金鑰（正式環境）：`openssl rand -hex 32` → 填入 `FIELD_ENCRYPTION_KEY`。
 

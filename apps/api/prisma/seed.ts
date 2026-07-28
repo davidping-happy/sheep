@@ -11,12 +11,19 @@ const prisma = new PrismaClient();
 /** Phase 1 MVP 種子：管理員、牧區小組、佳文、公告 */
 async function main() {
   const adminEmail = 'admin@church.local';
+  // 密碼優先取環境變數；未設定時用開發預設值，但會提醒改掉（勿用於對外環境）
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123456';
+  if (!process.env.SEED_ADMIN_PASSWORD) {
+    console.warn(
+      '[警告] 使用開發預設管理員密碼。API 對外開放前請執行：npm run set-password',
+    );
+  }
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
     update: {},
     create: {
       email: adminEmail,
-      passwordHash: await bcrypt.hash('ChangeMe123456', 12),
+      passwordHash: await bcrypt.hash(adminPassword, 12),
       displayName: '系統管理員',
       role: Role.ADMIN,
       consentAt: new Date(),

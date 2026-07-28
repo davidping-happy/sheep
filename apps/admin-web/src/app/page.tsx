@@ -13,8 +13,8 @@ export default function DashboardPage() {
     <div>
       <h2>總覽 — 成二牧區</h2>
       <p className="muted">
-        溫馨家庭風後台。種子帳號{' '}
-        <code>admin@church.local</code> / <code>ChangeMe123456</code>。
+        溫馨家庭風後台。管理員帳號 <code>admin@church.local</code>，
+        密碼請以 <code>npm run set-password</code>（apps/api）設定。
       </p>
       <div className="grid">
         {MODULES.map((m) => (

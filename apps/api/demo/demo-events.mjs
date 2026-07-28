@@ -9,6 +9,7 @@
  */
 
 const BASE = process.env.API_BASE ?? 'http://localhost:3000/api';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'ChangeMe123456';
 
 let pass = 0;
 let fail = 0;
@@ -68,7 +69,7 @@ async function main() {
   const admin = (
     await call('/auth/login', {
       method: 'POST',
-      body: { email: 'admin@church.local', password: 'ChangeMe123456' },
+      body: { email: 'admin@church.local', password: ADMIN_PASSWORD },
     })
   ).data.accessToken;
   assert(alice && bob && carol && admin, '三位會友 + 管理員(主辦同工)就緒');

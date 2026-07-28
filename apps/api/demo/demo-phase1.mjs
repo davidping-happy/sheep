@@ -2,6 +2,7 @@
  * Phase 1 MVP 煙霧測試：帳號、YouTube、佳文、小組、公告
  */
 const BASE = process.env.API_BASE ?? 'http://localhost:3000/api';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'ChangeMe123456';
 
 async function call(path, { method = 'GET', token, body } = {}) {
   const res = await fetch(`${BASE}${path}`, {
@@ -34,7 +35,7 @@ async function main() {
   console.log('1) 帳號系統');
   const login = await call('/auth/login', {
     method: 'POST',
-    body: { email: 'admin@church.local', password: 'ChangeMe123456' },
+    body: { email: 'admin@church.local', password: ADMIN_PASSWORD },
   });
   assert(login.status === 201 && login.data?.accessToken, '管理員登入');
   const token = login.data?.accessToken;

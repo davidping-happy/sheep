@@ -77,7 +77,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1
 - 行動端網頁：`cd apps\mobile; npx expo start --web` → http://localhost:8081
 - API 文件：http://localhost:3000/docs
 
-登入：`admin@church.local` / `ChangeMe123456`
+登入：`admin@church.local`（密碼以 `npm run set-password --workspace apps/api` 設定；
+開發預設值為 `ChangeMe123456`，**API 對外開放前務必更換**）
 
 驗證第一階段：
 

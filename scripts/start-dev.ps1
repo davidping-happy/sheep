@@ -69,7 +69,7 @@ Write-Host ""
 Write-Host "就緒後請開啟：" -ForegroundColor Cyan
 Write-Host "  後台審核頁  http://localhost:3001/prayer"
 Write-Host "  API 文件     http://localhost:3000/docs"
-Write-Host "  登入帳號     admin@church.local / ChangeMe123456"
+Write-Host "  登入帳號     admin@church.local（密碼：cd apps\api; npm run set-password）"
 Write-Host ""
 Write-Host "行動端（另開終端）：cd apps\mobile; npm start"
 Write-Host "驗證腳本：cd apps\api; node demo\demo.mjs; node demo\demo-events.mjs"
