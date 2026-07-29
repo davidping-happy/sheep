@@ -2,7 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   env: {
-    NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:3000/api',
+    // 預設連 Render 雲端；本機 API 請在 .env.local 覆寫
+    NEXT_PUBLIC_API_BASE:
+      process.env.NEXT_PUBLIC_API_BASE ??
+      'https://churchsheep-api.onrender.com/api',
   },
 };
 

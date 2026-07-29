@@ -33,7 +33,7 @@ export function useAdminAuth() {
         setLoginError(
           err instanceof ApiError
             ? err.message
-            : '登入失敗，請確認 API 是否運行於 :3000',
+            : '登入失敗，請確認 API 可連線（預設為雲端 churchsheep-api.onrender.com）',
         );
       } finally {
         setLoggingIn(false);
@@ -63,7 +63,9 @@ export function AdminLoginForm({ title, hint, auth }: { title: string; hint: str
           {auth.loggingIn ? '登入中…' : '登入'}
         </button>
         <p className="muted" style={{ marginTop: 8 }}>
-          忘記密碼請執行 <code>npm run set-password</code>（apps/api）重設。
+          API：<code>{process.env.NEXT_PUBLIC_API_BASE ?? 'https://churchsheep-api.onrender.com/api'}</code>
+          <br />
+          忘記密碼請對雲端資料庫執行 <code>npm run set-password</code>（apps/api）。
         </p>
       </form>
     </div>

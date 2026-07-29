@@ -73,20 +73,23 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1
 ```
 
 然後開啟：
-- 後台：http://localhost:3001（佳文／小組／公告／主日崇拜）
+- 後台：http://localhost:3001（預設連雲端 API）
 - 行動端網頁：`cd apps\mobile; npx expo start --web` → http://localhost:8081
-- API 文件：http://localhost:3000/docs
+- 雲端 API：https://churchsheep-api.onrender.com/api
+- 健康檢查：https://churchsheep-api.onrender.com/api/health
 
-資料庫為 PostgreSQL：先 `npm run db:up`（需 Docker Desktop），再於 `apps/api` 執行
-`npx prisma migrate deploy` 與 `npm run seed`。
+本機若要自架 API：先 `npm run db:up`（需 Docker Desktop），再於 `apps/api` 執行
+`npx prisma migrate deploy` 與 `npm run seed`，並在後台 `.env.local` 設
+`NEXT_PUBLIC_API_BASE=http://localhost:3000/api`。
 
-登入：`admin@church.local`（密碼以 `npm run set-password --workspace apps/api` 設定；
-開發預設值為 `ChangeMe123456`，**API 對外開放前務必更換**）
+登入：`admin@church.local`（雲端密碼為 Render 的 `SEED_ADMIN_PASSWORD`；
+本機可用 `npm run set-password --workspace apps/api`）
 
 ### 給別人 24 小時測試（不必再開通道）
 
-把 API 部署到 Render 雲端後，測試者就不依賴你的電腦是否開著。
+API 已部署於 Render：`https://churchsheep-api.onrender.com`。
 完整步驟見 [`docs/CLOUD-DEPLOY.md`](docs/CLOUD-DEPLOY.md)。
+行動端說明見 [`apps/mobile/HOW-TO-USE.md`](apps/mobile/HOW-TO-USE.md)。
 
 驗證第一階段：
 

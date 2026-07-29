@@ -44,7 +44,7 @@
 
 | 變數 | 建議值 |
 |------|--------|
-| `CORS_ORIGINS` | `http://localhost:3001,http://localhost:8081`（之後有網頁站再加） |
+| `CORS_ORIGINS` | `http://localhost:3001,http://127.0.0.1:3001,http://localhost:8081,http://127.0.0.1:8081` |
 | `SEED_ADMIN_PASSWORD` | 一組至少 12 字、只有你知道的管理員密碼 |
 | `FIELD_ENCRYPTION_KEY` | 本機執行 `openssl rand -hex 32` 產生後貼上（64 個 hex 字元） |
 

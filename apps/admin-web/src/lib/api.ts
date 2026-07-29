@@ -1,5 +1,13 @@
+import { CLOUD_API_BASE, LOCAL_API_BASE } from './config';
+
+/**
+ * 後台預設連雲端 API；本機改打本地後端時在 .env.local 設：
+ * NEXT_PUBLIC_API_BASE=http://localhost:3000/api
+ */
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:3000/api';
+  process.env.NEXT_PUBLIC_API_BASE ?? CLOUD_API_BASE;
+
+export { CLOUD_API_BASE, LOCAL_API_BASE };
 
 export class ApiError extends Error {
   constructor(

@@ -1,3 +1,5 @@
+import { API_BASE } from '../lib/api';
+
 const MODULES = [
   { name: '帳號 / RBAC', desc: '註冊登入、角色權限', stage: '階段一 ✓', href: null },
   { name: '主日崇拜 YouTube', desc: '最新影片預覽與嵌入播放', stage: '階段一 ✓', href: '/livestream' },
@@ -13,8 +15,15 @@ export default function DashboardPage() {
     <div>
       <h2>總覽 — 成二牧區</h2>
       <p className="muted">
-        溫馨家庭風後台。管理員帳號 <code>admin@church.local</code>，
-        密碼請以 <code>npm run set-password</code>（apps/api）設定。
+        溫馨家庭風後台。管理員帳號 <code>admin@church.local</code>
+        （密碼為 Render 部署時的 <code>SEED_ADMIN_PASSWORD</code>，或雲端 DB 執行{' '}
+        <code>npm run set-password</code> 後的值）。
+      </p>
+      <p className="muted">
+        目前 API：{' '}
+        <a href={API_BASE.replace(/\/api$/, '/api/health')} target="_blank" rel="noreferrer">
+          {API_BASE}
+        </a>
       </p>
       <div className="grid">
         {MODULES.map((m) => (
