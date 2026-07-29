@@ -50,6 +50,22 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
+  // 根路徑說明（避免打開網址只看到 404；須在 listen 之前註冊）
+  app.use((req: { method: string; path: string }, res: { json: (b: unknown) => void }, next: () => void) => {
+    if (req.method === 'GET' && (req.path === '/' || req.path === '')) {
+      return res.json({
+        service: 'churchsheep-api',
+        message:
+          '這是 API 服務，不是管理後台。請改開 https://churchsheep-admin.onrender.com',
+        health: '/api/health',
+        livestream: '/api/livestream/latest',
+        admin: 'https://churchsheep-admin.onrender.com',
+        prayer: 'https://churchsheep-admin.onrender.com/prayer',
+      });
+    }
+    return next();
+  });
+
   // Swagger 文件（正式環境建議關閉或加保護）
   if (config.get('env') !== 'production') {
     const swaggerConfig = new DocumentBuilder()
