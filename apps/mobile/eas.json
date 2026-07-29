@@ -10,7 +10,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE": "https://occurred-cosmetics-extension-informed.trycloudflare.com/api"
+        "EXPO_PUBLIC_API_BASE": "http://10.75.32.231:3000/api"
       }
     },
     "production": {

@@ -43,36 +43,29 @@ npx eas init
 
 ```powershell
 cd c:\Users\User\Desktop\churchsheep
-powershell -ExecutionPolicy Bypass -File scripts\start-public-api.ps1
+npm run public:api
 ```
 
-畫面會出現類似：
+它會啟動 API、開通道、做一次外部連線測試，並**自動把新網址寫進 `eas.json` 的
+`preview` 設定**，所以不必手動改檔案。畫面會顯示：
 
 ```
-https://xxxx-xxxx-xxxx.trycloudflare.com
+公開網址： https://xxxx-xxxx-xxxx.trycloudflare.com/api
+外部連線測試通過。
+eas.json 的 preview 設定已更新為新網址。
 ```
 
-**這個視窗要一直開著**，關掉測試者就連不上。
+**這個視窗要一直開著**，關掉或按 Ctrl+C 測試者就連不上。
 
-### 步驟 2：把網址寫進建置設定
-
-打開 `apps/mobile/eas.json`，把 `preview` 的網址換成步驟 1 拿到的網址（**後面要加 `/api`**）：
-
-```json
-"env": {
-  "EXPO_PUBLIC_API_BASE": "https://xxxx-xxxx-xxxx.trycloudflare.com/api"
-}
-```
-
-### 步驟 3：建置 APK
+### 步驟 2：建置 APK
 
 ```powershell
 cd c:\Users\User\Desktop\churchsheep\apps\mobile
 npm run apk
 ```
 
-- 第一次會問要不要幫你產生 Android keystore（簽章金鑰）→ 選 **Yes**，之後都用同一把
-- 雲端排隊＋建置大約 10～20 分鐘
+- Android keystore（簽章金鑰）已由 Expo 保管，之後每次建置都用同一把
+- 排隊＋建置時間不固定，實測從送出到完成約 2 小時（免費方案排隊佔大部分）
 - 完成後終端機會給一個下載連結，也可到 <https://expo.dev> 的專案頁 → Builds 下載
 
 查看進度：
@@ -81,7 +74,7 @@ npm run apk
 npm run apk:status
 ```
 
-### 步驟 4：發給測試者
+### 步驟 3：發給測試者
 
 把 APK 檔（或 Expo 給的下載連結）用 LINE／Google Drive 傳出去，附上這段說明：
 
@@ -108,6 +101,7 @@ Cloudflare 免費通道每次重開網址都會變。**不必重新建置 APK**�
 | 狀況 | 原因與處理 |
 |------|------------|
 | 登入顯示 `Network request failed` | 通道視窗關了，或 API 沒開 → 重跑步驟 1 |
+| 昨天可以、今天測試者連不上 | 電腦休眠或重開機後通道會停止，**重開後網址也會變**。重跑步驟 1，再把新網址給測試者填（或重新打包一版） |
 | 安裝時被阻擋 | Android 需允許「未知來源」安裝 |
 | 建置失敗說找不到 projectId | 先執行 `npx eas init` |
 | 想給 iPhone 測 | APK 不支援 iOS，需要 Apple 開發者帳號走 TestFlight |
