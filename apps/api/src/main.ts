@@ -12,9 +12,30 @@ async function bootstrap() {
   // 安全標頭 (§四.5 PLATFORM)
   app.use(helmet());
 
-  // CORS 白名單 (§四.5)
+  // CORS 白名單 (§四.5)；開發允許 Cloudflare 臨時通道，正式允許 Render 網域
+  const allowed = config.get<string[]>('corsOrigins') ?? [];
+  const isDev = config.get('env') !== 'production';
   app.enableCors({
-    origin: config.get<string[]>('corsOrigins'),
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowed.includes(origin)) return callback(null, true);
+      try {
+        const host = new URL(origin).hostname;
+        if (
+          host.endsWith('.onrender.com') ||
+          host.endsWith('.expo.app') ||
+          host.endsWith('.exp.direct')
+        ) {
+          return callback(null, true);
+        }
+        if (isDev && host.endsWith('.trycloudflare.com')) {
+          return callback(null, true);
+        }
+      } catch {
+        // ignore invalid origin
+      }
+      return callback(new Error(`CORS blocked: ${origin}`), false);
+    },
     credentials: true,
   });
 

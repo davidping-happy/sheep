@@ -108,7 +108,12 @@ Cloudflare 免費通道每次重開網址都會變。**不必重新建置 APK**�
 
 ---
 
-## 之後要更穩定的話
+## 之後要更穩定的話（推薦）
 
-現在的通道靠你的電腦開著。若要長期測試／正式上線，建議把 API 搬到雲端主機（固定網址、24 小時可用），
-並把資料庫從 SQLite 換成 PostgreSQL。屆時 `EXPO_PUBLIC_API_BASE` 換成固定網址，就不必再開通道。
+本機 Cloudflare 通道靠你的電腦開著，**休眠／關機就會斷線**。
+
+要讓測試者 24 小時都連得上：請改走雲端部署（Render + PostgreSQL），
+步驟見 [docs/CLOUD-DEPLOY.md](../../docs/CLOUD-DEPLOY.md)。部署後把
+`eas.json` 的 `EXPO_PUBLIC_API_BASE` 改成雲端網址，再 `npm run apk` 一次即可。
+
+現在的通道腳本仍適合「臨時給旁邊的人試一下」。

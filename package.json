@@ -14,6 +14,8 @@
     "dev:mobile": "npm run start --prefix apps/mobile",
     "public:api": "powershell -ExecutionPolicy Bypass -File scripts/start-public-api.ps1",
     "apk": "npm run apk --prefix apps/mobile",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "prisma:generate": "npm run prisma:generate --workspace apps/api",

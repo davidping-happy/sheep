@@ -1,0 +1,23 @@
+# 本機 PostgreSQL（取代 SQLite，與雲端環境一致）
+# 用法：在 repo 根目錄執行  docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: churchsheep-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: churchsheep
+      POSTGRES_PASSWORD: churchsheep
+      POSTGRES_DB: churchsheep
+    volumes:
+      - churchsheep_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U churchsheep -d churchsheep"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  churchsheep_pg:

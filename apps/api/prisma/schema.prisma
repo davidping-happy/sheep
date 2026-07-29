@@ -1,13 +1,10 @@
 // 教會 APP 資料模型
 // 對應系統設計文件 §三.4 資料層 / §四 資安規則。
 //
-// ── 資料庫切換 ──────────────────────────────────────────────
-// 本地 demo：SQLite（零外部依賴，見下方 provider = "sqlite"）。
-// 正式環境（設計文件要求 PostgreSQL）：只需
-//   1) provider 改為 "postgresql"
-//   2) .env 的 DATABASE_URL 改為 postgres 連線字串
-// 列舉一律以字串欄位儲存 + 應用層 class-validator/共用列舉驗證，
-// 使資料模型與 DB 廠商無關、且新增列舉值不需 migration。
+// ── 資料庫 ──────────────────────────────────────────────────
+// 正式／對外測試：PostgreSQL（Render / Neon / 本機 Docker）。
+// 本機快速啟動：docker compose up -d（見 repo 根目錄 docker-compose.yml）
+// 列舉一律以字串欄位儲存 + 應用層驗證，與 DB 廠商無關。
 // ───────────────────────────────────────────────────────────
 //
 // 敏感欄位（晨禱筆記內容、代禱匿名對應）於「應用層」AES-256 加密後存入，
@@ -18,7 +15,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

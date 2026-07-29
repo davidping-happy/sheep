@@ -7,7 +7,8 @@ import * as SecureStore from 'expo-secure-store';
  * 1. App 內「伺服器連線設定」手動填入（打包後仍可改，不必重新建置 APK）
  * 2. 建置時的 EXPO_PUBLIC_API_BASE（eas.json / .env）
  * 3. app.json 的 extra.apiBase
- * 網頁預覽固定用 localhost，避免 CORS／區網 IP 問題。
+ * 網頁：有設 EXPO_PUBLIC_API_BASE 時優先用（給 iPhone Safari 對外測試）；
+ * 未設定時才用 localhost，避免本機預覽踩到區網 IP。
  */
 const OVERRIDE_KEY = 'api_base_override';
 
@@ -15,9 +16,10 @@ let cached: string | null = null;
 let memoryOverride: string | null = null;
 
 function buildTimeBase(): string {
+  const fromEnv = process.env.EXPO_PUBLIC_API_BASE;
+  if (fromEnv) return fromEnv;
   if (Platform.OS === 'web') return 'http://localhost:3000/api';
   return (
-    process.env.EXPO_PUBLIC_API_BASE ??
     (Constants.expoConfig?.extra?.apiBase as string | undefined) ??
     'http://localhost:3000/api'
   );
