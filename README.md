@@ -87,7 +87,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1
 
 ### 給別人 24 小時測試（不必再開通道）
 
-API 已部署於 Render：`https://churchsheep-api.onrender.com`。
+API 已部署於 Render：`https://churchsheep-api.onrender.com`。  
+管理後台也可部署為 `https://churchsheep-admin.onrender.com`（見下方 Blueprint）。
 完整步驟見 [`docs/CLOUD-DEPLOY.md`](docs/CLOUD-DEPLOY.md)。
 行動端說明見 [`apps/mobile/HOW-TO-USE.md`](apps/mobile/HOW-TO-USE.md)。
 

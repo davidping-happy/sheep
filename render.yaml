@@ -1,4 +1,4 @@
-# Render Blueprint：一鍵建立 PostgreSQL + API
+# Render Blueprint：PostgreSQL + API + 管理後台
 # 文件：https://render.com/docs/blueprint-spec
 # 使用：把此 repo 連到 Render 後選擇 "Blueprint"，指向本檔。
 
@@ -28,7 +28,7 @@ services:
           name: churchsheep-db
           property: connectionString
       - key: CORS_ORIGINS
-        value: "http://localhost:3001,http://127.0.0.1:3001,http://localhost:8081,http://127.0.0.1:8081"
+        value: "http://localhost:3001,http://127.0.0.1:3001,http://localhost:8081,http://127.0.0.1:8081,https://churchsheep-admin.onrender.com"
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
@@ -45,3 +45,17 @@ services:
         value: https://www.youtube.com/@breadoflifechristianchurch9830
       - key: SEED_ADMIN_PASSWORD
         sync: false
+
+  - type: web
+    name: churchsheep-admin
+    runtime: node
+    plan: free
+    rootDir: apps/admin-web
+    buildCommand: npm install --legacy-peer-deps --include=dev && npm run build
+    startCommand: npx next start -p $PORT
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_BASE
+        value: https://churchsheep-api.onrender.com/api

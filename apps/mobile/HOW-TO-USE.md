@@ -33,14 +33,13 @@ npx expo start --web
 1. 底部有 **首頁／我的最愛／個人中心／更多**
 2. 首頁點 **「禱告代禱牆」** 發布代禱
 
-公開代禱到後台審核：
+公開代禱到後台審核（雲端，電腦可關機）：
 
-```powershell
-cd c:\Users\User\Desktop\churchsheep\apps\admin-web
-npm run dev
-```
+https://churchsheep-admin.onrender.com/prayer
 
-打開 http://localhost:3001/prayer ，用 `admin@church.local` 登入。
+（若尚未部署後台，本機可跑 `cd apps\admin-web; npm run dev` → http://localhost:3001/prayer）
+
+用 `admin@church.local` 登入（密碼為 Render 的 `SEED_ADMIN_PASSWORD`）。
 
 ---
 
