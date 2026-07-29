@@ -15,8 +15,7 @@ services:
     plan: free
     rootDir: apps/api
     buildCommand: npm install --legacy-peer-deps && npx prisma generate && npm run build
-    preDeployCommand: npx prisma migrate deploy
-    startCommand: node dist/main.js
+    startCommand: npx prisma migrate deploy && node dist/main.js
     healthCheckPath: /api/livestream/latest
     envVars:
       - key: NODE_ENV

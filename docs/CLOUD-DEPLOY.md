@@ -24,10 +24,19 @@
 ### 2. 用 Blueprint 一鍵部署
 
 1. Render Dashboard → **New** → **Blueprint**
-2. 選這個 repo，Blueprint 檔選 repo 根目錄的 `render.yaml`
-3. 套用後會建立：
-   - PostgreSQL：`churchsheep-db`（Free）
-   - Web Service：`churchsheep-api`（Free）
+2. 選這個 repo
+3. 第一頁這樣填：
+   - **Blueprint Name**：`churchsheep`（可自訂，必填）
+   - **Branch**：`main`
+   - **Blueprint Path**：留空或填 `render.yaml`
+4. 下一頁若出現環境變數欄位，請填：
+   - `CORS_ORIGINS`：`http://localhost:3001,http://localhost:8081`
+   - `SEED_ADMIN_PASSWORD`：你的管理員密碼（至少 12 字）
+   - `FIELD_ENCRYPTION_KEY`：本機執行 `openssl rand -hex 32` 產生後貼上
+5. 套用後會建立 PostgreSQL `churchsheep-db` 與 Web Service `churchsheep-api`
+
+> 注意：Render **免費方案不支援** `preDeployCommand`，本專案已改成啟動時執行
+> `npx prisma migrate deploy && node dist/main.js`。
 
 ### 3. 填必要環境變數
 
