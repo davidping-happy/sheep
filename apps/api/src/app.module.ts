@@ -17,6 +17,7 @@ import { GroupsModule } from './modules/groups/groups.module';
 import { EventsModule } from './modules/events/events.module';
 import { PrayerModule } from './modules/prayer/prayer.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { AnnouncementsModule } from './modules/announcements/announcements.modul
     PrayerModule,
     AnnouncementsModule,
   ],
+  controllers: [HealthController],
   providers: [
     // 全域：先驗速率、再驗身份、最後驗角色
     { provide: APP_GUARD, useClass: ThrottlerGuard },

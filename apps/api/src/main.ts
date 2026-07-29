@@ -63,7 +63,8 @@ async function bootstrap() {
   }
 
   const port = config.get<number>('port') ?? 3000;
-  await app.listen(port);
-  Logger.log(`API 已啟動於 http://localhost:${port}/api`, 'Bootstrap');
+  // Render 等雲端平台需綁 0.0.0.0，否則健康檢查會失敗
+  await app.listen(port, '0.0.0.0');
+  Logger.log(`API 已啟動於 http://0.0.0.0:${port}/api`, 'Bootstrap');
 }
 bootstrap();

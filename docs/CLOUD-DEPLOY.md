@@ -63,6 +63,12 @@ https://churchsheep-api.onrender.com/api
 瀏覽器打開測試：
 
 ```
+https://churchsheep-api.onrender.com/api/health
+```
+
+應看到 `{"ok":true,...}`。直播測試：
+
+```
 https://churchsheep-api.onrender.com/api/livestream/latest
 ```
 
