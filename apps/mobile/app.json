@@ -4,6 +4,12 @@
     "slug": "churchsheep",
     "owner": "davidping",
     "version": "1.1.0",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/66020654-93b9-4ffc-8e1f-ef464b21acca"
+    },
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "churchsheep",

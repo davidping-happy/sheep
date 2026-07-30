@@ -12,7 +12,8 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
     "apk": "eas build --platform android --profile preview",
-    "apk:status": "eas build:list --platform android --limit 5"
+    "apk:status": "eas build:list --platform android --limit 5",
+    "update:preview": "eas update --branch preview --message \"成二牧區測試版\""
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -24,6 +25,7 @@
     "expo-secure-store": "~15.0.8",
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
+    "expo-updates": "~29.0.19",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",

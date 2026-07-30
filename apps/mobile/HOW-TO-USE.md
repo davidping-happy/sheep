@@ -43,17 +43,20 @@ https://churchsheep-admin.onrender.com/prayer
 
 ---
 
-## 方式 B：Android APK（推薦給測試者）
+## 方式 B：Android／iPhone 給別人測試
 
-**下載連結（可傳 LINE，請用 Chrome 開啟）：**
+完整連結見 **[TEST-LINKS.md](./TEST-LINKS.md)**。
 
+| 系統 | 怎麼測 |
+|------|--------|
+| Android | GitHub Release 下載 APK（Chrome，勿用 LINE 內建瀏覽器） |
+| iPhone | App Store 裝 Expo Go → 開更新頁 Open with Expo Go |
+
+iPhone 測試頁：  
+https://expo.dev/accounts/davidping/projects/churchsheep/updates/4562ad33-9935-4b7d-9158-6ae1cd08b0f2
+
+Android APK：  
 https://github.com/davidping-happy/sheep/releases/download/v1.1.0-preview/churchsheep-1.1.0.apk
-
-1. Chrome 下載 APK（不要用 LINE 內建瀏覽器）
-2. 到「檔案／下載」點檔案安裝「成二牧區」
-3. 註冊帳號即可
-
-完整說明見 [TEST-LINKS.md](./TEST-LINKS.md)、[APK-GUIDE.md](./APK-GUIDE.md)。
 
 舊版 APK 若連不上，到「更多 → 伺服器連線設定」貼：
 
