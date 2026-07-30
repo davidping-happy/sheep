@@ -76,12 +76,20 @@ npm run apk:status
 
 ### 步驟 3：發給測試者
 
-把 APK 檔（或 Expo 給的下載連結）用 LINE／Google Drive 傳出去，附上這段說明：
+**不要傳 Expo artifacts 直連**（LINE 常擋、瀏覽器易卡在 100%）。
 
-> 1. 點連結下載 APK
-> 2. 手機會提醒「不允許安裝未知來源的應用程式」→ 允許這一次
-> 3. 安裝後打開「成二牧區」
-> 4. 用邀請的帳號登入，或點「還沒有帳號？註冊」（密碼至少 10 個字）
+請改用 GitHub Release：
+
+https://github.com/davidping-happy/sheep/releases/download/v1.1.0-preview/churchsheep-1.1.0.apk
+
+（新版出包後：下載 APK → `gh release create` 上傳，或見 [TEST-LINKS.md](./TEST-LINKS.md)）
+
+附上這段說明：
+
+> 1. 用 Chrome 打開連結下載（不要用 LINE 內建瀏覽器）
+> 2. 到「檔案／下載」點 APK；若卡在「下載中…」但已 100%，取消後改開下載資料夾的檔案
+> 3. 允許未知來源後安裝「成二牧區」
+> 4. 註冊（密碼至少 10 個字）或登入
 
 ---
 

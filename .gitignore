@@ -49,3 +49,5 @@ tools/
 
 # Test / coverage
 coverage/
+
+dist-apk/

@@ -45,17 +45,21 @@ https://churchsheep-admin.onrender.com/prayer
 
 ## 方式 B：Android APK（推薦給測試者）
 
-1. 下載最新 APK（連雲端，電腦可關機）
-2. 允許「未知來源」後安裝「成二牧區」
+**下載連結（可傳 LINE，請用 Chrome 開啟）：**
+
+https://github.com/davidping-happy/sheep/releases/download/v1.1.0-preview/churchsheep-1.1.0.apk
+
+1. Chrome 下載 APK（不要用 LINE 內建瀏覽器）
+2. 到「檔案／下載」點檔案安裝「成二牧區」
 3. 註冊帳號即可
+
+完整說明見 [TEST-LINKS.md](./TEST-LINKS.md)、[APK-GUIDE.md](./APK-GUIDE.md)。
 
 舊版 APK 若連不上，到「更多 → 伺服器連線設定」貼：
 
 ```
 https://churchsheep-api.onrender.com
 ```
-
-詳見 [APK-GUIDE.md](./APK-GUIDE.md)、[CLOUD-DEPLOY.md](../../docs/CLOUD-DEPLOY.md)。
 
 ---
 
