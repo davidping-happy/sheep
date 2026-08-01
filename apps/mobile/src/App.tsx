@@ -4,7 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import type { HomeStackParamList, MainTabParamList } from './navigation/types';
 import LoginScreen from './screens/LoginScreen';
@@ -93,6 +96,9 @@ function HomeStackNavigator() {
 }
 
 function MainTabs() {
+  const insets = useSafeAreaInsets();
+  // 預留底部 Home Indicator／手勢列，避免分頁列被遮住
+  const bottomPad = Math.max(insets.bottom, 8);
   return (
     <Tab.Navigator
       screenOptions={{
@@ -104,11 +110,12 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: '#FFFCFA',
           borderTopColor: theme.color.border,
-          height: 60,
-          paddingBottom: 6,
-          paddingTop: 4,
+          height: 52 + bottomPad,
+          paddingBottom: bottomPad,
+          paddingTop: 6,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarSafeAreaInsets: { bottom: 0 },
       }}
     >
       <Tab.Screen

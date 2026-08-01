@@ -23,6 +23,8 @@ interface DevotionNote {
   createdAt: string;
 }
 
+const CONTENT_MAX = 800;
+
 function todayISO() {
   const d = new Date();
   return d.toISOString().slice(0, 10);
@@ -78,6 +80,10 @@ export default function DevotionsScreen() {
 
   async function save() {
     if (!content.trim()) return;
+    if (content.trim().length > CONTENT_MAX) {
+      setError(`筆記內容最多 ${CONTENT_MAX} 字`);
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -210,11 +216,15 @@ export default function DevotionsScreen() {
             <TextInput
               style={[styles.input, styles.textarea]}
               value={content}
-              onChangeText={setContent}
+              onChangeText={(t) => setContent(t.slice(0, CONTENT_MAX))}
               multiline
+              maxLength={CONTENT_MAX}
               textAlignVertical="top"
               placeholder="今天主對我說…"
             />
+            <Text style={styles.counter}>
+              {content.length}/{CONTENT_MAX}
+            </Text>
             <View style={styles.modalActions}>
               <Pressable
                 style={styles.cancelBtn}
@@ -304,6 +314,12 @@ const styles = StyleSheet.create({
     color: theme.color.ink,
   },
   label: { fontSize: 12, color: theme.color.inkMuted },
+  counter: {
+    fontSize: 12,
+    color: theme.color.inkMuted,
+    textAlign: 'right',
+    marginBottom: 4,
+  },
   input: {
     borderWidth: 1,
     borderColor: theme.color.border,

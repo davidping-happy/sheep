@@ -5,7 +5,11 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
 } from 'class-validator';
+
+/** 晨禱筆記內容上限（字元） */
+const CONTENT_MAX = 800;
 
 export class CreateDevotionDto {
   @IsDateString()
@@ -13,9 +17,11 @@ export class CreateDevotionDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   scriptureRef?: string;
 
   @IsString()
+  @MaxLength(CONTENT_MAX)
   content!: string; // 明文進來，service 內加密後才落地
 
   @IsOptional()
@@ -30,10 +36,12 @@ export class CreateDevotionDto {
 export class UpdateDevotionDto {
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   scriptureRef?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(CONTENT_MAX)
   content?: string;
 
   @IsOptional()
