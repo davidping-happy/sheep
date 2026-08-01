@@ -26,7 +26,7 @@ Release 頁：https://github.com/davidping-happy/sheep/releases/tag/v1.1.0-previ
 1. App Store 安裝 **Expo Go**（需支援 SDK 54）
 2. 用 Safari 打開，點 **Open with Expo Go**：
 
-https://expo.dev/accounts/davidping/projects/churchsheep/updates/4562ad33-9935-4b7d-9158-6ae1cd08b0f2
+https://expo.dev/accounts/davidping/projects/churchsheep/updates/773b4e37-b347-41ea-ac0a-7c820aa3829c
 
 或專案頁：https://expo.dev/accounts/davidping/projects/churchsheep  
 → Updates → `preview` → Open in Expo Go
@@ -47,7 +47,7 @@ Android（請用 Chrome 開，不要用 LINE 內建瀏覽器）：
 下載完到「檔案／下載」點 APK 安裝
 
 iPhone：先裝 App Store「Expo Go」，再開
-→ https://expo.dev/accounts/davidping/projects/churchsheep/updates/4562ad33-9935-4b7d-9158-6ae1cd08b0f2
+→ https://expo.dev/accounts/davidping/projects/churchsheep/updates/773b4e37-b347-41ea-ac0a-7c820aa3829c
    點 Open with Expo Go
 
 註冊密碼至少 10 個字。
