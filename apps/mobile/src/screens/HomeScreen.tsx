@@ -7,7 +7,6 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FEATURES, FeatureIcon } from '../features';
 import { theme } from '../theme';
 import type { HomeStackParamList } from '../navigation/types';
@@ -15,15 +14,10 @@ import type { HomeStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<HomeStackParamList, 'HomeMain'>;
 
 export default function HomeScreen({ navigation }: Props) {
-  const insets = useSafeAreaInsets();
-
   return (
     <ScrollView
       style={styles.root}
-      contentContainerStyle={[
-        styles.container,
-        { paddingBottom: 24 + insets.bottom },
-      ]}
+      contentContainerStyle={styles.container}
     >
       <Image
         source={require('../../assets/brand/home-banner.png')}

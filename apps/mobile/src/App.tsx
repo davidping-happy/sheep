@@ -1,8 +1,12 @@
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import {
+  BottomTabBar,
+  createBottomTabNavigator,
+  type BottomTabBarProps,
+} from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
   SafeAreaProvider,
@@ -95,12 +99,33 @@ function HomeStackNavigator() {
   );
 }
 
-function MainTabs() {
+/** 分頁列墊高底部，避開 iPhone Home Indicator／Android 系統導覽鍵 */
+function SafeTabBar(props: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  // 預留底部 Home Indicator／手勢列，避免分頁列被遮住
-  const bottomPad = Math.max(insets.bottom, 8);
+  // Expo Go 等環境常回報 insets.bottom=0，Android 仍需避開三鍵／手勢列
+  const bottomPad = Math.max(
+    insets.bottom,
+    Platform.OS === 'android' ? 48 : 20,
+  );
+  return (
+    <View style={[tabBarSafeStyles.wrap, { paddingBottom: bottomPad }]}>
+      <BottomTabBar {...props} />
+    </View>
+  );
+}
+
+const tabBarSafeStyles = StyleSheet.create({
+  wrap: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.color.border,
+  },
+});
+
+function MainTabs() {
   return (
     <Tab.Navigator
+      tabBar={(props) => <SafeTabBar {...props} />}
       screenOptions={{
         headerStyle: { backgroundColor: theme.color.bg },
         headerTintColor: theme.color.brand,
@@ -108,13 +133,15 @@ function MainTabs() {
         tabBarActiveTintColor: theme.color.brand,
         tabBarInactiveTintColor: theme.color.inkMuted,
         tabBarStyle: {
-          backgroundColor: '#FFFCFA',
-          borderTopColor: theme.color.border,
-          height: 52 + bottomPad,
-          paddingBottom: bottomPad,
-          paddingTop: 6,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 0,
+          elevation: 0,
+          height: 56,
+          paddingTop: 4,
+          paddingBottom: 4,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarItemStyle: { paddingVertical: 2 },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginBottom: 2 },
         tabBarSafeAreaInsets: { bottom: 0 },
       }}
     >
