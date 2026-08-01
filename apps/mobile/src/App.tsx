@@ -1,4 +1,4 @@
-import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
@@ -99,28 +99,25 @@ function HomeStackNavigator() {
   );
 }
 
-/** 分頁列墊高底部，避開 iPhone Home Indicator／Android 系統導覽鍵 */
+/**
+ * Android edge-to-edge 下系統常回報 insets.bottom=0。
+ * 必須把底部 inset 傳進 BottomTabBar（勿設 tabBarSafeAreaInsets.bottom=0，
+ * 也勿只在外層 View padding——BottomTabBar 內部用 insets 算高度與 padding）。
+ */
 function SafeTabBar(props: BottomTabBarProps) {
-  const insets = useSafeAreaInsets();
-  // Expo Go 等環境常回報 insets.bottom=0，Android 仍需避開三鍵／手勢列
-  const bottomPad = Math.max(
-    insets.bottom,
-    Platform.OS === 'android' ? 48 : 20,
+  const hookInsets = useSafeAreaInsets();
+  const bottom = Math.max(
+    props.insets.bottom,
+    hookInsets.bottom,
+    Platform.OS === 'android' ? 64 : 20,
   );
   return (
-    <View style={[tabBarSafeStyles.wrap, { paddingBottom: bottomPad }]}>
-      <BottomTabBar {...props} />
-    </View>
+    <BottomTabBar
+      {...props}
+      insets={{ ...props.insets, bottom }}
+    />
   );
 }
-
-const tabBarSafeStyles = StyleSheet.create({
-  wrap: {
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.color.border,
-  },
-});
 
 function MainTabs() {
   return (
@@ -134,15 +131,9 @@ function MainTabs() {
         tabBarInactiveTintColor: theme.color.inkMuted,
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
-          borderTopWidth: 0,
-          elevation: 0,
-          height: 56,
-          paddingTop: 4,
-          paddingBottom: 4,
+          borderTopColor: theme.color.border,
         },
-        tabBarItemStyle: { paddingVertical: 2 },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginBottom: 2 },
-        tabBarSafeAreaInsets: { bottom: 0 },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}
     >
       <Tab.Screen
