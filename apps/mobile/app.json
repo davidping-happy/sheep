@@ -17,7 +17,8 @@
     "backgroundColor": "#FBF6F0",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "org.church.churchsheep"
+      "bundleIdentifier": "org.church.churchsheep",
+      "buildNumber": "1"
     },
     "android": {
       "package": "org.church.churchsheep",

@@ -13,6 +13,8 @@
     "typecheck": "tsc --noEmit",
     "apk": "eas build --platform android --profile preview",
     "apk:status": "eas build:list --platform android --limit 5",
+    "ios:build": "eas build --platform ios --profile production",
+    "ios:submit": "eas submit --platform ios --profile production --latest",
     "update:preview": "eas update --branch preview --message \"成二牧區測試版\""
   },
   "dependencies": {
