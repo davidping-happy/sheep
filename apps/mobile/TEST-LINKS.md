@@ -25,6 +25,6 @@ https://github.com/davidping-happy/sheep/releases/download/v1.1.0-preview/church
 註冊密碼至少 10 字。第一次可能等 30～60 秒。
 ```
 
-## iPhone（免 Expo → TestFlight）
+## iPhone（Expo Go，免年費）
 
-見 [TESTFLIGHT.md](./TESTFLIGHT.md)。需 Apple Developer 年費。
+見 [IPHONE-EXPO-GO.md](./IPHONE-EXPO-GO.md)。不走 TestFlight。
