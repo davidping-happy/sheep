@@ -17,6 +17,7 @@ import { GroupsModule } from './modules/groups/groups.module';
 import { EventsModule } from './modules/events/events.module';
 import { PrayerModule } from './modules/prayer/prayer.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -42,6 +43,7 @@ import { HealthController } from './health.controller';
     EventsModule,
     PrayerModule,
     AnnouncementsModule,
+    UploadsModule,
   ],
   controllers: [HealthController],
   providers: [

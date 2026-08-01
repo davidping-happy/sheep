@@ -118,6 +118,7 @@ model PastoralArea {
   id          String       @id @default(uuid())
   name        String
   description String?
+  photoUrl    String?
   createdAt   DateTime     @default(now())
   groups      SmallGroup[]
   announcements Announcement[]
@@ -307,6 +308,7 @@ model Announcement {
   id             String        @id @default(uuid())
   title          String
   body           String
+  imageUrl       String?
   audience       String        @default("ALL")
   pastoralArea   PastoralArea? @relation(fields: [pastoralAreaId], references: [id])
   pastoralAreaId String?
@@ -321,6 +323,17 @@ model Announcement {
 
   @@index([audience, isPublished])
   @@map("announcements")
+}
+
+// 後台上傳圖片（存 Postgres，免外部物件儲存）
+model MediaAsset {
+  id        String   @id @default(uuid())
+  mimeType  String
+  data      Bytes
+  byteSize  Int
+  createdAt DateTime @default(now())
+
+  @@map("media_assets")
 }
 
 // 推播裝置註冊 (FCM token)。裝置端 token 不落地明文 log (§四.1)

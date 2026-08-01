@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { ImageField } from '../../components/ImageField';
 import { apiFetch, ApiError } from '../../lib/api';
+import { resolveMediaUrl } from '../../lib/media';
 import { AdminLoginForm, useAdminAuth } from '../../lib/useAdminAuth';
 
 interface ArticleRow {
@@ -37,6 +39,7 @@ export default function ArticlesPage() {
   const [slug, setSlug] = useState('');
   const [body, setBody] = useState('');
   const [category, setCategory] = useState('DAILY_BREAD');
+  const [coverUrl, setCoverUrl] = useState('');
   const [publishNow, setPublishNow] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -75,6 +78,7 @@ export default function ArticlesPage() {
     setSlug('');
     setBody('');
     setCategory('DAILY_BREAD');
+    setCoverUrl('');
     setPublishNow(false);
     setShowPreview(false);
   }
@@ -91,6 +95,7 @@ export default function ArticlesPage() {
       setSlug(a.slug);
       setBody(a.body);
       setCategory(a.category);
+      setCoverUrl(a.coverUrl ?? '');
       setPublishNow(a.isPublished);
       setShowPreview(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -109,6 +114,7 @@ export default function ArticlesPage() {
       slug: slug || autoSlug(title) || `article-${Date.now()}`,
       body,
       category,
+      coverUrl: coverUrl || null,
       isPublished: publishNow,
     };
     try {
@@ -212,6 +218,14 @@ export default function ArticlesPage() {
             </option>
           ))}
         </select>
+        {auth.token ? (
+          <ImageField
+            label="封面圖片"
+            token={auth.token}
+            value={coverUrl}
+            onChange={setCoverUrl}
+          />
+        ) : null}
         <label style={labelStyle}>內文</label>
         <textarea
           style={{ ...inputStyle, minHeight: 160 }}
@@ -253,6 +267,20 @@ export default function ArticlesPage() {
               {CAT_OPTIONS.find((c) => c.value === category)?.label}
             </span>
             <h3 style={{ margin: '8px 0' }}>{title || '（無標題）'}</h3>
+            {resolveMediaUrl(coverUrl) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={resolveMediaUrl(coverUrl)!}
+                alt=""
+                style={{
+                  width: '100%',
+                  maxHeight: 240,
+                  objectFit: 'cover',
+                  borderRadius: 8,
+                  marginBottom: 12,
+                }}
+              />
+            ) : null}
             <pre
               style={{
                 whiteSpace: 'pre-wrap',

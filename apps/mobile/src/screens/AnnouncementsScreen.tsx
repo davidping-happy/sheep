@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { RemoteImage } from '../components/RemoteImage';
 import { api, ApiError } from '../lib/api';
 import { theme } from '../theme';
 
@@ -14,6 +15,7 @@ interface Announcement {
   id: string;
   title: string;
   body: string;
+  imageUrl?: string | null;
   publishedAt: string | null;
   audience: string;
 }
@@ -72,6 +74,7 @@ export default function AnnouncementsScreen() {
       }
       renderItem={({ item }) => (
         <View style={styles.card}>
+          <RemoteImage uri={item.imageUrl} style={styles.image} />
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.meta}>
             {item.publishedAt
@@ -94,6 +97,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.bg,
   },
   list: { padding: 16, paddingBottom: 32, flexGrow: 1 },
+  image: {
+    width: '100%',
+    height: 160,
+    borderRadius: theme.radius.sm,
+    marginBottom: 10,
+  },
   card: {
     backgroundColor: theme.color.bgElevated,
     borderRadius: theme.radius.md,

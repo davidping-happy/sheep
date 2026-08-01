@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RemoteImage } from '../components/RemoteImage';
 import { api, ApiError } from '../lib/api';
 import type { HomeStackParamList } from '../navigation/types';
 import { theme } from '../theme';
@@ -19,12 +20,14 @@ interface GroupBrief {
   meetingTime?: string | null;
   meetingPlace?: string | null;
   intro?: string | null;
+  photoUrl?: string | null;
 }
 
 interface Area {
   id: string;
   name: string;
   description: string | null;
+  photoUrl?: string | null;
   groups: GroupBrief[];
 }
 
@@ -93,6 +96,7 @@ export default function GroupsScreen({ navigation }: Props) {
         if (item.type === 'area') {
           return (
             <View style={styles.areaHeader}>
+              <RemoteImage uri={item.area.photoUrl} style={styles.areaPhoto} />
               <Text style={styles.areaName}>{item.area.name}</Text>
               {item.area.description ? (
                 <Text style={styles.areaDesc}>{item.area.description}</Text>
@@ -107,13 +111,18 @@ export default function GroupsScreen({ navigation }: Props) {
               navigation.navigate('GroupDetail', { id: item.group.id })
             }
           >
-            <Text style={styles.groupName}>{item.group.name}</Text>
-            {item.group.meetingTime ? (
-              <Text style={styles.meta}>時間：{item.group.meetingTime}</Text>
-            ) : null}
-            {item.group.meetingPlace ? (
-              <Text style={styles.meta}>地點：{item.group.meetingPlace}</Text>
-            ) : null}
+            <View style={styles.row}>
+              <RemoteImage uri={item.group.photoUrl} style={styles.groupPhoto} />
+              <View style={styles.groupText}>
+                <Text style={styles.groupName}>{item.group.name}</Text>
+                {item.group.meetingTime ? (
+                  <Text style={styles.meta}>時間：{item.group.meetingTime}</Text>
+                ) : null}
+                {item.group.meetingPlace ? (
+                  <Text style={styles.meta}>地點：{item.group.meetingPlace}</Text>
+                ) : null}
+              </View>
+            </View>
           </Pressable>
         );
       }}
@@ -131,6 +140,12 @@ const styles = StyleSheet.create({
   },
   list: { padding: 16, paddingBottom: 32, flexGrow: 1 },
   areaHeader: { marginTop: 8, marginBottom: 10 },
+  areaPhoto: {
+    width: '100%',
+    height: 120,
+    borderRadius: theme.radius.md,
+    marginBottom: 8,
+  },
   areaName: { fontSize: 18, fontWeight: '700', color: theme.color.ink },
   areaDesc: { fontSize: 13, color: theme.color.inkMuted, marginTop: 4 },
   card: {
@@ -141,6 +156,9 @@ const styles = StyleSheet.create({
     borderColor: theme.color.border,
     marginBottom: 10,
   },
+  row: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  groupPhoto: { width: 64, height: 64, borderRadius: 10 },
+  groupText: { flex: 1 },
   groupName: { fontSize: 16, fontWeight: '600', color: theme.color.ink },
   meta: { fontSize: 13, color: theme.color.inkMuted, marginTop: 4 },
   empty: { textAlign: 'center', color: theme.color.inkMuted, marginTop: 40 },

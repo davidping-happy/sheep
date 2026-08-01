@@ -30,7 +30,11 @@ export class GroupsService {
 
   listAreas() {
     return this.prisma.pastoralArea.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        photoUrl: true,
         groups: {
           select: {
             id: true,
@@ -47,9 +51,9 @@ export class GroupsService {
     });
   }
 
-  createArea(name: string, description?: string) {
+  createArea(name: string, description?: string, photoUrl?: string) {
     return this.prisma.pastoralArea.create({
-      data: { name, description },
+      data: { name, description, photoUrl },
     });
   }
 

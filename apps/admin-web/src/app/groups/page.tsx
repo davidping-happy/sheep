@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { ImageField } from '../../components/ImageField';
 import { apiFetch, ApiError } from '../../lib/api';
+import { resolveMediaUrl } from '../../lib/media';
 import { AdminLoginForm, useAdminAuth } from '../../lib/useAdminAuth';
 
 interface GroupBrief {
@@ -10,12 +12,14 @@ interface GroupBrief {
   meetingTime?: string | null;
   meetingPlace?: string | null;
   intro?: string | null;
+  photoUrl?: string | null;
 }
 
 interface Area {
   id: string;
   name: string;
   description: string | null;
+  photoUrl?: string | null;
   groups: GroupBrief[];
 }
 
@@ -25,11 +29,13 @@ export default function GroupsPage() {
   const [error, setError] = useState('');
   const [areaName, setAreaName] = useState('');
   const [areaDesc, setAreaDesc] = useState('');
+  const [areaPhotoUrl, setAreaPhotoUrl] = useState('');
   const [groupName, setGroupName] = useState('');
   const [groupAreaId, setGroupAreaId] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
   const [meetingPlace, setMeetingPlace] = useState('');
   const [intro, setIntro] = useState('');
+  const [groupPhotoUrl, setGroupPhotoUrl] = useState('');
 
   const load = useCallback(async () => {
     setError('');
@@ -53,10 +59,15 @@ export default function GroupsPage() {
       await apiFetch('/groups/areas', {
         method: 'POST',
         token: auth.token,
-        body: JSON.stringify({ name: areaName, description: areaDesc || undefined }),
+        body: JSON.stringify({
+          name: areaName,
+          description: areaDesc || undefined,
+          photoUrl: areaPhotoUrl || undefined,
+        }),
       });
       setAreaName('');
       setAreaDesc('');
+      setAreaPhotoUrl('');
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '建立牧區失敗');
@@ -74,12 +85,14 @@ export default function GroupsPage() {
           pastoralAreaId: groupAreaId,
           name: groupName,
           intro: intro || undefined,
+          photoUrl: groupPhotoUrl || undefined,
           meetingTime: meetingTime || undefined,
           meetingPlace: meetingPlace || undefined,
         }),
       });
       setGroupName('');
       setIntro('');
+      setGroupPhotoUrl('');
       setMeetingTime('');
       setMeetingPlace('');
       await load();
@@ -124,6 +137,12 @@ export default function GroupsPage() {
             value={areaDesc}
             onChange={(e) => setAreaDesc(e.target.value)}
           />
+          <ImageField
+            label="牧區圖片"
+            token={auth.token}
+            value={areaPhotoUrl}
+            onChange={setAreaPhotoUrl}
+          />
           <button style={primaryBtn}>建立牧區</button>
         </form>
 
@@ -155,6 +174,12 @@ export default function GroupsPage() {
             value={intro}
             onChange={(e) => setIntro(e.target.value)}
           />
+          <ImageField
+            label="小組圖片"
+            token={auth.token}
+            value={groupPhotoUrl}
+            onChange={setGroupPhotoUrl}
+          />
           <label style={labelStyle}>聚會時間</label>
           <input
             style={inputStyle}
@@ -176,15 +201,47 @@ export default function GroupsPage() {
         <div className="card" key={area.id}>
           <h3>{area.name}</h3>
           <p className="muted">{area.description}</p>
+          {resolveMediaUrl(area.photoUrl) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={resolveMediaUrl(area.photoUrl)!}
+              alt=""
+              style={{
+                width: '100%',
+                maxHeight: 160,
+                objectFit: 'cover',
+                borderRadius: 8,
+                marginBottom: 10,
+              }}
+            />
+          ) : null}
           <ul style={{ paddingLeft: 18 }}>
             {area.groups.map((g) => (
               <li key={g.id} style={{ marginBottom: 8 }}>
-                <strong>{g.name}</strong>
-                {g.meetingTime ? ` · ${g.meetingTime}` : ''}
-                {g.meetingPlace ? ` @ ${g.meetingPlace}` : ''}
-                {g.intro ? (
-                  <div className="muted">{g.intro}</div>
-                ) : null}
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  {resolveMediaUrl(g.photoUrl) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={resolveMediaUrl(g.photoUrl)!}
+                      alt=""
+                      style={{
+                        width: 56,
+                        height: 56,
+                        objectFit: 'cover',
+                        borderRadius: 8,
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : null}
+                  <div>
+                    <strong>{g.name}</strong>
+                    {g.meetingTime ? ` · ${g.meetingTime}` : ''}
+                    {g.meetingPlace ? ` @ ${g.meetingPlace}` : ''}
+                    {g.intro ? (
+                      <div className="muted">{g.intro}</div>
+                    ) : null}
+                  </div>
+                </div>
               </li>
             ))}
           </ul>

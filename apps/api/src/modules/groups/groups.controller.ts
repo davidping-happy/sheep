@@ -36,6 +36,7 @@ class CreateGroupDto {
 class CreateAreaDto {
   @IsString() name!: string;
   @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsString() photoUrl?: string;
 }
 
 @ApiTags('groups')
@@ -53,7 +54,7 @@ export class GroupsController {
   @Roles(Role.STAFF)
   @Post('areas')
   createArea(@Body() dto: CreateAreaDto) {
-    return this.service.createArea(dto.name, dto.description);
+    return this.service.createArea(dto.name, dto.description, dto.photoUrl);
   }
 
   @Public()

@@ -1,13 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { ImageField } from '../../components/ImageField';
 import { apiFetch, ApiError } from '../../lib/api';
+import { resolveMediaUrl } from '../../lib/media';
 import { AdminLoginForm, useAdminAuth } from '../../lib/useAdminAuth';
 
 interface Announcement {
   id: string;
   title: string;
   body: string;
+  imageUrl?: string | null;
   audience: string;
   pastoralAreaId: string | null;
   targetGroupId: string | null;
@@ -45,6 +48,7 @@ export default function AnnouncementsPage() {
   const [error, setError] = useState('');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [audience, setAudience] = useState('ALL');
   const [pastoralAreaId, setPastoralAreaId] = useState('');
   const [targetGroupId, setTargetGroupId] = useState('');
@@ -81,6 +85,7 @@ export default function AnnouncementsPage() {
     return {
       title,
       body,
+      imageUrl: imageUrl || undefined,
       audience,
       pastoralAreaId:
         audience === 'PASTORAL_AREA' ? pastoralAreaId : undefined,
@@ -125,6 +130,7 @@ export default function AnnouncementsPage() {
       }
       setTitle('');
       setBody('');
+      setImageUrl('');
       await load(auth.token);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '操作失敗');
@@ -189,6 +195,12 @@ export default function AnnouncementsPage() {
           value={body}
           onChange={(e) => setBody(e.target.value)}
           required
+        />
+        <ImageField
+          label="公告圖片"
+          token={auth.token}
+          value={imageUrl}
+          onChange={setImageUrl}
         />
         <label style={labelStyle}>分眾對象</label>
         <select
@@ -289,6 +301,20 @@ export default function AnnouncementsPage() {
                 ? ` · 推播 ${new Date(a.pushSentAt).toLocaleString()}`
                 : ''}
             </div>
+            {resolveMediaUrl(a.imageUrl) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={resolveMediaUrl(a.imageUrl)!}
+                alt=""
+                style={{
+                  marginTop: 8,
+                  maxWidth: '100%',
+                  maxHeight: 180,
+                  objectFit: 'cover',
+                  borderRadius: 8,
+                }}
+              />
+            ) : null}
             <p style={{ whiteSpace: 'pre-wrap' }}>{a.body}</p>
             {!a.isPublished || !a.pushSentAt ? (
               <button

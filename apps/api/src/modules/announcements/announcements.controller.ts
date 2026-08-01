@@ -25,6 +25,7 @@ import { PushService } from './push.service';
 class CreateAnnouncementDto {
   @IsString() title!: string;
   @IsString() body!: string;
+  @IsOptional() @IsString() imageUrl?: string;
   @IsOptional() @IsEnum(PushAudience) audience?: PushAudience;
   @IsOptional() @IsUUID() pastoralAreaId?: string;
   @IsOptional() @IsUUID() targetGroupId?: string;

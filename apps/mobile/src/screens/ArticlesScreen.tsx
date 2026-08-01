@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RemoteImage } from '../components/RemoteImage';
 import { api, ApiError } from '../lib/api';
 import type { HomeStackParamList } from '../navigation/types';
 import { theme } from '../theme';
@@ -18,6 +19,7 @@ interface ArticleSummary {
   title: string;
   slug: string;
   category: string;
+  coverUrl?: string | null;
   publishedAt: string | null;
 }
 
@@ -89,6 +91,7 @@ export default function ArticlesScreen({ navigation }: Props) {
             navigation.navigate('ArticleDetail', { slug: item.slug })
           }
         >
+          <RemoteImage uri={item.coverUrl} style={styles.thumb} />
           <Text style={styles.badge}>{CAT[item.category] ?? item.category}</Text>
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.meta}>
@@ -111,6 +114,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.bg,
   },
   list: { padding: 16, gap: 10, paddingBottom: 32, flexGrow: 1 },
+  thumb: {
+    width: '100%',
+    height: 140,
+    borderRadius: theme.radius.sm,
+    marginBottom: 10,
+  },
   card: {
     backgroundColor: theme.color.bgElevated,
     borderRadius: theme.radius.md,

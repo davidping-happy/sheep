@@ -7,6 +7,7 @@ import { PushService } from './push.service';
 interface AnnouncementInput {
   title: string;
   body: string;
+  imageUrl?: string;
   audience?: PushAudience;
   pastoralAreaId?: string;
   targetGroupId?: string;
@@ -40,6 +41,7 @@ export class AnnouncementsService {
       data: {
         title: dto.title,
         body: dto.body,
+        imageUrl: dto.imageUrl,
         audience: dto.audience ?? PushAudience.ALL,
         pastoralAreaId:
           dto.audience === PushAudience.PASTORAL_AREA
