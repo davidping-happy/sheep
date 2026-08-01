@@ -53,7 +53,7 @@ https://churchsheep-admin.onrender.com/prayer
 | iPhone | App Store 裝 Expo Go → 開更新頁 Open with Expo Go |
 
 iPhone 測試頁：  
-https://expo.dev/accounts/davidping/projects/churchsheep/updates/4562ad33-9935-4b7d-9158-6ae1cd08b0f2
+https://expo.dev/accounts/davidping/projects/churchsheep/updates/773b4e37-b347-41ea-ac0a-7c820aa3829c
 
 Android APK：  
 https://github.com/davidping-happy/sheep/releases/download/v1.1.0-preview/churchsheep-1.1.0.apk
