@@ -3,14 +3,18 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../lib/api';
 import { theme } from '../theme';
 
@@ -34,6 +38,7 @@ function todayISO() {
  * 晨禱靈修筆記：雲端同步、AES 加密儲存、預設私人。
  */
 export default function DevotionsScreen() {
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<DevotionNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -189,42 +194,58 @@ export default function DevotionsScreen() {
       />
 
       <Modal visible={modal} animationType="slide" transparent>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modal}>
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View
+            style={[
+              styles.modal,
+              { paddingBottom: Math.max(insets.bottom, 12) },
+            ]}
+          >
             <Text style={styles.modalTitle}>
               {editing ? '編輯筆記' : '新增晨禱筆記'}
             </Text>
-            {!editing ? (
-              <>
-                <Text style={styles.label}>日期 (YYYY-MM-DD)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={noteDate}
-                  onChangeText={setNoteDate}
-                  placeholder="2026-07-26"
-                />
-              </>
-            ) : null}
-            <Text style={styles.label}>經文出處（選填）</Text>
-            <TextInput
-              style={styles.input}
-              value={scriptureRef}
-              onChangeText={setScriptureRef}
-              placeholder="例如：詩篇 23:1"
-            />
-            <Text style={styles.label}>筆記內容</Text>
-            <TextInput
-              style={[styles.input, styles.textarea]}
-              value={content}
-              onChangeText={(t) => setContent(t.slice(0, CONTENT_MAX))}
-              multiline
-              maxLength={CONTENT_MAX}
-              textAlignVertical="top"
-              placeholder="今天主對我說…"
-            />
-            <Text style={styles.counter}>
-              {content.length}/{CONTENT_MAX}
-            </Text>
+            <ScrollView
+              style={styles.modalBody}
+              contentContainerStyle={styles.modalBodyContent}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+            >
+              {!editing ? (
+                <>
+                  <Text style={styles.label}>日期 (YYYY-MM-DD)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={noteDate}
+                    onChangeText={setNoteDate}
+                    placeholder="2026-07-26"
+                  />
+                </>
+              ) : null}
+              <Text style={styles.label}>經文出處（選填）</Text>
+              <TextInput
+                style={styles.input}
+                value={scriptureRef}
+                onChangeText={setScriptureRef}
+                placeholder="例如：詩篇 23:1"
+              />
+              <Text style={styles.label}>筆記內容</Text>
+              <TextInput
+                style={[styles.input, styles.textarea]}
+                value={content}
+                onChangeText={(t) => setContent(t.slice(0, CONTENT_MAX))}
+                multiline
+                scrollEnabled
+                maxLength={CONTENT_MAX}
+                textAlignVertical="top"
+                placeholder="今天主對我說…"
+              />
+              <Text style={styles.counter}>
+                {content.length}/{CONTENT_MAX}
+              </Text>
+            </ScrollView>
             <View style={styles.modalActions}>
               <Pressable
                 style={styles.cancelBtn}
@@ -243,7 +264,7 @@ export default function DevotionsScreen() {
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -303,15 +324,23 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.bgElevated,
     borderTopLeftRadius: theme.radius.md,
     borderTopRightRadius: theme.radius.md,
-    padding: 20,
-    gap: 8,
-    maxHeight: '90%',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    maxHeight: '92%',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 8,
     color: theme.color.ink,
+  },
+  modalBody: {
+    flexGrow: 0,
+    maxHeight: 420,
+  },
+  modalBodyContent: {
+    gap: 8,
+    paddingBottom: 8,
   },
   label: { fontSize: 12, color: theme.color.inkMuted },
   counter: {
@@ -330,12 +359,17 @@ const styles = StyleSheet.create({
     color: theme.color.ink,
     backgroundColor: theme.color.bgElevated,
   },
-  textarea: { minHeight: 140 },
+  // 固定高度＋內部捲動，避免把「儲存」擠出畫面
+  textarea: { minHeight: 140, maxHeight: 220 },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    alignItems: 'center',
     gap: 10,
-    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.color.border,
+    backgroundColor: theme.color.bgElevated,
   },
   cancelBtn: { padding: 12 },
   saveBtn: {
