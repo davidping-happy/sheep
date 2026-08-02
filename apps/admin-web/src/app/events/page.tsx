@@ -349,17 +349,17 @@ export default function EventsPage() {
             >
               匯出名單 CSV
             </button>
-            {qr ? (
-              <DynamicCheckinQr
-                payload={qr.payload}
-                token={qr.token}
-                expiresAt={qr.expiresAt}
-                ttlSeconds={qr.ttlSeconds}
-                autoRotate={autoRotate}
-                onRefresh={issueQr}
-              />
-            ) : null}
           </div>
+          {qr ? (
+            <DynamicCheckinQr
+              payload={qr.payload}
+              token={qr.token}
+              expiresAt={qr.expiresAt}
+              ttlSeconds={qr.ttlSeconds}
+              autoRotate={autoRotate}
+              onRefresh={issueQr}
+            />
+          ) : null}
 
           {rosterLoading ? (
             <p className="muted">載入名單中…</p>

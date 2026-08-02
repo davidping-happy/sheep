@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { API_BASE, ApiError } from '../lib/api';
 import { resolveMediaUrl } from '../lib/media';
+import { getAccessToken } from '../lib/session';
 
 type Props = {
   label?: string;
@@ -29,9 +30,10 @@ export function ImageField({
     try {
       const form = new FormData();
       form.append('file', file);
+      const auth = getAccessToken() ?? token;
       const res = await fetch(`${API_BASE}/uploads`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${auth}` },
         body: form,
       });
       const text = await res.text();

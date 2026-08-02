@@ -210,14 +210,16 @@ export class EventsService {
     });
   }
 
+  /** 後台同工／管理員皆可查名單與產簽到碼（共用帳號情境） */
   private async assertOrganizer(user: AuthUser, eventId: string) {
-    if (user.role === Role.ADMIN) return;
-    const event = await this.prisma.event.findUnique({
-      where: { id: eventId },
-    });
-    if (!event) throw new NotFoundException();
-    if (event.createdBy !== user.id) {
-      throw new ForbiddenException('僅該活動主辦同工可存取');
+    if (user.role === Role.ADMIN || user.role === Role.STAFF) {
+      const event = await this.prisma.event.findUnique({
+        where: { id: eventId },
+        select: { id: true },
+      });
+      if (!event) throw new NotFoundException();
+      return;
     }
+    throw new ForbiddenException('僅牧區同工／管理員可存取活動名單與簽到碼');
   }
 }
