@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RemoteImage } from '../components/RemoteImage';
+import { ImageGallery } from '../components/ImageGallery';
 import { api, ApiError } from '../lib/api';
 import type { HomeStackParamList } from '../navigation/types';
 import { theme } from '../theme';
@@ -17,6 +17,7 @@ interface GroupDetail {
   name: string;
   intro: string | null;
   photoUrl?: string | null;
+  imageUrls?: string[];
   meetingTime: string | null;
   meetingPlace: string | null;
   contactVisible: boolean;
@@ -64,7 +65,11 @@ export default function GroupDetailScreen({ route }: Props) {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container}>
-      <RemoteImage uri={group.photoUrl} style={styles.photo} />
+      <ImageGallery
+        urls={group.imageUrls}
+        coverUrl={group.photoUrl}
+        height={220}
+      />
       <Text style={styles.area}>{group.pastoralArea.name}</Text>
       <Text style={styles.title}>{group.name}</Text>
       {group.intro ? <Text style={styles.intro}>{group.intro}</Text> : null}
@@ -104,11 +109,6 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: theme.color.bg,
     flexGrow: 1,
-  },
-  photo: {
-    width: '100%',
-    height: 200,
-    borderRadius: theme.radius.md,
   },
   area: { fontSize: 13, color: theme.color.brand, fontWeight: '600' },
   title: { fontSize: 24, fontWeight: '700', color: theme.color.ink },

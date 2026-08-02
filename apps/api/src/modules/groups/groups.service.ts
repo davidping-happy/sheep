@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Role } from '../../common/enums';
+import { normalizeImageUrls } from '../../common/media-urls';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthUser } from '../../auth/decorators/current-user.decorator';
 
@@ -12,10 +13,28 @@ interface GroupInput {
   name: string;
   intro?: string;
   photoUrl?: string;
+  imageUrls?: string[];
   meetingTime?: string;
   meetingPlace?: string;
   contactVisible?: boolean;
   leaderId?: string;
+}
+
+const MAX_GROUP_IMAGES = 7;
+
+function withGroupImages<
+  T extends { photoUrl?: string | null; imageUrls?: string[] },
+>(row: T) {
+  const imageUrls = normalizeImageUrls(
+    row.imageUrls,
+    MAX_GROUP_IMAGES,
+    row.photoUrl,
+  );
+  return {
+    ...row,
+    imageUrls,
+    photoUrl: imageUrls[0] ?? null,
+  };
 }
 
 /**
@@ -28,8 +47,8 @@ interface GroupInput {
 export class GroupsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  listAreas() {
-    return this.prisma.pastoralArea.findMany({
+  async listAreas() {
+    const areas = await this.prisma.pastoralArea.findMany({
       select: {
         id: true,
         name: true,
@@ -40,6 +59,7 @@ export class GroupsService {
             id: true,
             name: true,
             photoUrl: true,
+            imageUrls: true,
             meetingTime: true,
             meetingPlace: true,
             intro: true,
@@ -49,6 +69,10 @@ export class GroupsService {
       },
       orderBy: { name: 'asc' },
     });
+    return areas.map((area) => ({
+      ...area,
+      groups: area.groups.map(withGroupImages),
+    }));
   }
 
   createArea(name: string, description?: string, photoUrl?: string) {
@@ -66,16 +90,38 @@ export class GroupsService {
       },
     });
     if (!group) throw new NotFoundException();
-    return group;
+    return withGroupImages(group);
   }
 
   createGroup(dto: GroupInput) {
-    return this.prisma.smallGroup.create({ data: dto });
+    const imageUrls = normalizeImageUrls(
+      dto.imageUrls,
+      MAX_GROUP_IMAGES,
+      dto.photoUrl,
+    );
+    const { imageUrls: _i, photoUrl: _p, ...rest } = dto;
+    return this.prisma.smallGroup.create({
+      data: {
+        ...rest,
+        imageUrls,
+        photoUrl: imageUrls[0] ?? null,
+      },
+    });
   }
 
   async updateGroup(user: AuthUser, id: string, dto: Partial<GroupInput>) {
     await this.assertCanEdit(user, id);
-    return this.prisma.smallGroup.update({ where: { id }, data: dto });
+    const data: Record<string, unknown> = { ...dto };
+    if (dto.imageUrls !== undefined || dto.photoUrl !== undefined) {
+      const imageUrls = normalizeImageUrls(
+        dto.imageUrls,
+        MAX_GROUP_IMAGES,
+        dto.photoUrl,
+      );
+      data.imageUrls = imageUrls;
+      data.photoUrl = imageUrls[0] ?? null;
+    }
+    return this.prisma.smallGroup.update({ where: { id }, data });
   }
 
   /** 小組長僅能編輯自己帶領的小組；同工/管理員不限 */

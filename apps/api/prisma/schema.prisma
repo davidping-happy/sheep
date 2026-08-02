@@ -99,7 +99,8 @@ model Article {
   title       String
   slug        String    @unique
   category    String    @default("DAILY_BREAD")
-  coverUrl    String?
+  coverUrl    String?   // 封面＝imageUrls[0]，相容舊客戶端
+  imageUrls   String[]  @default([]) // 最多 5 張
   body        String    // 支援 Markdown/富文本
   author      User      @relation("ArticleAuthor", fields: [authorId], references: [id])
   authorId    String
@@ -132,7 +133,8 @@ model SmallGroup {
   pastoralAreaId String
   name           String
   intro          String?
-  photoUrl       String?
+  photoUrl       String?      // 主圖＝imageUrls[0]，相容舊客戶端
+  imageUrls      String[]     @default([]) // 最多 7 張
   meetingTime    String?      // 聚會時間（文字描述）
   meetingPlace   String?
   // 聯絡資訊揭露需當事人同意 (§四.8 蒐集最小化)

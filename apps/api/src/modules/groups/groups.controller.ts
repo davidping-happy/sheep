@@ -9,6 +9,8 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Role } from '../../common/enums';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsOptional,
   IsString,
@@ -27,6 +29,11 @@ class CreateGroupDto {
   @IsString() name!: string;
   @IsOptional() @IsString() intro?: string;
   @IsOptional() @IsString() photoUrl?: string;
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(7)
+  @IsString({ each: true })
+  imageUrls?: string[];
   @IsOptional() @IsString() meetingTime?: string;
   @IsOptional() @IsString() meetingPlace?: string;
   @IsOptional() @IsBoolean() contactVisible?: boolean;

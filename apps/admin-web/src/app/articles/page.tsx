@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ImageField } from '../../components/ImageField';
+import { ImageGalleryField } from '../../components/ImageGalleryField';
 import { apiFetch, ApiError } from '../../lib/api';
 import { resolveMediaUrl } from '../../lib/media';
 import { AdminLoginForm, useAdminAuth } from '../../lib/useAdminAuth';
@@ -19,6 +19,7 @@ interface ArticleRow {
 interface ArticleFull extends ArticleRow {
   body: string;
   coverUrl: string | null;
+  imageUrls?: string[];
 }
 
 const CAT_OPTIONS = [
@@ -39,7 +40,7 @@ export default function ArticlesPage() {
   const [slug, setSlug] = useState('');
   const [body, setBody] = useState('');
   const [category, setCategory] = useState('DAILY_BREAD');
-  const [coverUrl, setCoverUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [publishNow, setPublishNow] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -78,7 +79,7 @@ export default function ArticlesPage() {
     setSlug('');
     setBody('');
     setCategory('DAILY_BREAD');
-    setCoverUrl('');
+    setImageUrls([]);
     setPublishNow(false);
     setShowPreview(false);
   }
@@ -95,7 +96,13 @@ export default function ArticlesPage() {
       setSlug(a.slug);
       setBody(a.body);
       setCategory(a.category);
-      setCoverUrl(a.coverUrl ?? '');
+      setImageUrls(
+        a.imageUrls?.length
+          ? a.imageUrls
+          : a.coverUrl
+            ? [a.coverUrl]
+            : [],
+      );
       setPublishNow(a.isPublished);
       setShowPreview(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -114,7 +121,8 @@ export default function ArticlesPage() {
       slug: slug || autoSlug(title) || `article-${Date.now()}`,
       body,
       category,
-      coverUrl: coverUrl || null,
+      imageUrls,
+      coverUrl: imageUrls[0] ?? null,
       isPublished: publishNow,
     };
     try {
@@ -219,11 +227,12 @@ export default function ArticlesPage() {
           ))}
         </select>
         {auth.token ? (
-          <ImageField
-            label="封面圖片"
+          <ImageGalleryField
+            label="文章圖片"
             token={auth.token}
-            value={coverUrl}
-            onChange={setCoverUrl}
+            value={imageUrls}
+            onChange={setImageUrls}
+            max={5}
           />
         ) : null}
         <label style={labelStyle}>內文</label>
@@ -267,20 +276,24 @@ export default function ArticlesPage() {
               {CAT_OPTIONS.find((c) => c.value === category)?.label}
             </span>
             <h3 style={{ margin: '8px 0' }}>{title || '（無標題）'}</h3>
-            {resolveMediaUrl(coverUrl) ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={resolveMediaUrl(coverUrl)!}
-                alt=""
-                style={{
-                  width: '100%',
-                  maxHeight: 240,
-                  objectFit: 'cover',
-                  borderRadius: 8,
-                  marginBottom: 12,
-                }}
-              />
-            ) : null}
+            {imageUrls.map((u) => {
+              const src = resolveMediaUrl(u);
+              return src ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={u}
+                  src={src}
+                  alt=""
+                  style={{
+                    width: '100%',
+                    maxHeight: 240,
+                    objectFit: 'cover',
+                    borderRadius: 8,
+                    marginBottom: 12,
+                  }}
+                />
+              ) : null;
+            })}
             <pre
               style={{
                 whiteSpace: 'pre-wrap',

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ImageField } from '../../components/ImageField';
+import { ImageGalleryField } from '../../components/ImageGalleryField';
 import { apiFetch, ApiError } from '../../lib/api';
 import { resolveMediaUrl } from '../../lib/media';
 import { AdminLoginForm, useAdminAuth } from '../../lib/useAdminAuth';
@@ -13,6 +14,7 @@ interface GroupBrief {
   meetingPlace?: string | null;
   intro?: string | null;
   photoUrl?: string | null;
+  imageUrls?: string[];
 }
 
 interface Area {
@@ -35,7 +37,7 @@ export default function GroupsPage() {
   const [meetingTime, setMeetingTime] = useState('');
   const [meetingPlace, setMeetingPlace] = useState('');
   const [intro, setIntro] = useState('');
-  const [groupPhotoUrl, setGroupPhotoUrl] = useState('');
+  const [groupImageUrls, setGroupImageUrls] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setError('');
@@ -85,14 +87,15 @@ export default function GroupsPage() {
           pastoralAreaId: groupAreaId,
           name: groupName,
           intro: intro || undefined,
-          photoUrl: groupPhotoUrl || undefined,
+          imageUrls: groupImageUrls,
+          photoUrl: groupImageUrls[0] || undefined,
           meetingTime: meetingTime || undefined,
           meetingPlace: meetingPlace || undefined,
         }),
       });
       setGroupName('');
       setIntro('');
-      setGroupPhotoUrl('');
+      setGroupImageUrls([]);
       setMeetingTime('');
       setMeetingPlace('');
       await load();
@@ -174,11 +177,12 @@ export default function GroupsPage() {
             value={intro}
             onChange={(e) => setIntro(e.target.value)}
           />
-          <ImageField
+          <ImageGalleryField
             label="小組圖片"
             token={auth.token}
-            value={groupPhotoUrl}
-            onChange={setGroupPhotoUrl}
+            value={groupImageUrls}
+            onChange={setGroupImageUrls}
+            max={7}
           />
           <label style={labelStyle}>聚會時間</label>
           <input
@@ -237,6 +241,11 @@ export default function GroupsPage() {
                     <strong>{g.name}</strong>
                     {g.meetingTime ? ` · ${g.meetingTime}` : ''}
                     {g.meetingPlace ? ` @ ${g.meetingPlace}` : ''}
+                    {(g.imageUrls?.length ?? (g.photoUrl ? 1 : 0)) > 0 ? (
+                      <div className="muted">
+                        圖片 {g.imageUrls?.length ?? 1} 張
+                      </div>
+                    ) : null}
                     {g.intro ? (
                       <div className="muted">{g.intro}</div>
                     ) : null}

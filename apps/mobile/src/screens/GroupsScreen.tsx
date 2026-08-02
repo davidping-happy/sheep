@@ -21,6 +21,7 @@ interface GroupBrief {
   meetingPlace?: string | null;
   intro?: string | null;
   photoUrl?: string | null;
+  imageUrls?: string[];
 }
 
 interface Area {

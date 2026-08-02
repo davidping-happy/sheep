@@ -20,6 +20,7 @@ interface ArticleSummary {
   slug: string;
   category: string;
   coverUrl?: string | null;
+  imageUrls?: string[];
   publishedAt: string | null;
 }
 

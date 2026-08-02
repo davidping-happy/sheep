@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RemoteImage } from '../components/RemoteImage';
+import { ImageGallery } from '../components/ImageGallery';
 import { api, ApiError } from '../lib/api';
 import type { HomeStackParamList } from '../navigation/types';
 import { theme } from '../theme';
@@ -18,6 +18,7 @@ interface Article {
   slug: string;
   category: string;
   coverUrl?: string | null;
+  imageUrls?: string[];
   body: string;
   publishedAt: string | null;
 }
@@ -62,7 +63,11 @@ export default function ArticleDetailScreen({ route }: Props) {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container}>
-      <RemoteImage uri={article.coverUrl} style={styles.cover} />
+      <ImageGallery
+        urls={article.imageUrls}
+        coverUrl={article.coverUrl}
+        height={220}
+      />
       <Text style={styles.title}>{article.title}</Text>
       <Text style={styles.meta}>
         {article.publishedAt
@@ -87,12 +92,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     backgroundColor: theme.color.bg,
     flexGrow: 1,
-  },
-  cover: {
-    width: '100%',
-    height: 200,
-    borderRadius: theme.radius.md,
-    marginBottom: 16,
   },
   title: {
     fontSize: 22,

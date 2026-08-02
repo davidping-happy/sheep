@@ -10,6 +10,8 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ArticleCategory, Role } from '../../common/enums';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsEnum,
   IsOptional,
@@ -29,6 +31,11 @@ class UpsertArticleDto {
   @IsString() body!: string;
   @IsOptional() @IsEnum(ArticleCategory) category?: ArticleCategory;
   @IsOptional() @IsString() coverUrl?: string;
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsString({ each: true })
+  imageUrls?: string[];
   @IsOptional() @IsBoolean() isPublished?: boolean;
 }
 

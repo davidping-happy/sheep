@@ -15,7 +15,7 @@
 
 ## 成二牧區
 
-https://expo.dev/accounts/davidping/projects/churchsheep/updates/961e1c07-fe6b-4745-95f8-6e62bde6c8da
+https://expo.dev/accounts/davidping/projects/churchsheep/updates/f94c0c16-53b7-4ea0-933e-7e82320f30ea
 
 專案頁：https://expo.dev/accounts/davidping/projects/churchsheep
 
@@ -23,7 +23,7 @@ https://expo.dev/accounts/davidping/projects/churchsheep/updates/961e1c07-fe6b-4
 
 ## 社青牧區
 
-https://expo.dev/accounts/davidping/projects/youngadult/updates/a551443d-5ebf-4fd4-8b53-ca40e43718e4
+https://expo.dev/accounts/davidping/projects/youngadult/updates/b8fff188-d2b8-44ae-9bdb-4565dc4b3fff
 
 專案頁：https://expo.dev/accounts/davidping/projects/youngadult
 
@@ -37,10 +37,10 @@ https://expo.dev/accounts/davidping/projects/youngadult/updates/a551443d-5ebf-4f
 2. 用 Safari 打開連結，點 Open with Expo Go
 
 成二：
-https://expo.dev/accounts/davidping/projects/churchsheep/updates/961e1c07-fe6b-4745-95f8-6e62bde6c8da
+https://expo.dev/accounts/davidping/projects/churchsheep/updates/f94c0c16-53b7-4ea0-933e-7e82320f30ea
 
 社青：
-https://expo.dev/accounts/davidping/projects/youngadult/updates/a551443d-5ebf-4fd4-8b53-ca40e43718e4
+https://expo.dev/accounts/davidping/projects/youngadult/updates/b8fff188-d2b8-44ae-9bdb-4565dc4b3fff
 
 註冊密碼至少 10 字。第一次可能等 30～60 秒。
 ```
