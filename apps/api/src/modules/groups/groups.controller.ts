@@ -1,12 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
   Post,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, PartialType } from '@nestjs/swagger';
 import { Role } from '../../common/enums';
 import {
   ArrayMaxSize,
@@ -40,11 +41,15 @@ class CreateGroupDto {
   @IsOptional() @IsUUID() leaderId?: string;
 }
 
+class UpdateGroupDto extends PartialType(CreateGroupDto) {}
+
 class CreateAreaDto {
   @IsString() name!: string;
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsString() photoUrl?: string;
 }
+
+class UpdateAreaDto extends PartialType(CreateAreaDto) {}
 
 @ApiTags('groups')
 @Controller('groups')
@@ -62,6 +67,20 @@ export class GroupsController {
   @Post('areas')
   createArea(@Body() dto: CreateAreaDto) {
     return this.service.createArea(dto.name, dto.description, dto.photoUrl);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Patch('areas/:id')
+  updateArea(@Param('id') id: string, @Body() dto: UpdateAreaDto) {
+    return this.service.updateArea(id, dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Delete('areas/:id')
+  removeArea(@Param('id') id: string) {
+    return this.service.removeArea(id);
   }
 
   @Public()
@@ -83,8 +102,18 @@ export class GroupsController {
   update(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body() dto: Partial<CreateGroupDto>,
+    @Body() dto: UpdateGroupDto,
   ) {
     return this.service.updateGroup(user, id, dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Delete(':id')
+  remove(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.service.removeGroup(user, id);
   }
 }

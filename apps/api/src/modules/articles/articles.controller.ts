@@ -1,13 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, PartialType } from '@nestjs/swagger';
 import { ArticleCategory, Role } from '../../common/enums';
 import {
   ArrayMaxSize,
@@ -38,6 +39,8 @@ class UpsertArticleDto {
   imageUrls?: string[];
   @IsOptional() @IsBoolean() isPublished?: boolean;
 }
+
+class UpdateArticleDto extends PartialType(UpsertArticleDto) {}
 
 /** 3. 靈修佳文分享（CMS 上稿，§二.3） */
 @ApiTags('articles')
@@ -81,7 +84,14 @@ export class ArticlesController {
   @ApiBearerAuth()
   @Roles(Role.STAFF)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<UpsertArticleDto>) {
+  update(@Param('id') id: string, @Body() dto: UpdateArticleDto) {
     return this.service.update(id, dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
   }
 }

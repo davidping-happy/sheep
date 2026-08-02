@@ -1,11 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, PartialType } from '@nestjs/swagger';
 import { Role } from '../../common/enums';
 import {
   AuthUser,
@@ -18,6 +20,8 @@ import {
   CreateEventDto,
   RegisterEventDto,
 } from './dto/event.dto';
+
+class UpdateEventDto extends PartialType(CreateEventDto) {}
 
 @ApiTags('events')
 @ApiBearerAuth()
@@ -34,6 +38,18 @@ export class EventsController {
   @Get()
   list() {
     return this.service.list();
+  }
+
+  @Roles(Role.STAFF)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateEventDto) {
+    return this.service.update(id, dto);
+  }
+
+  @Roles(Role.STAFF)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
   }
 
   @Get('mine')

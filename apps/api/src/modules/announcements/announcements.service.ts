@@ -56,6 +56,40 @@ export class AnnouncementsService {
     });
   }
 
+  async update(id: string, dto: Partial<AnnouncementInput>) {
+    const existing = await this.prisma.announcement.findUnique({
+      where: { id },
+    });
+    if (!existing) throw new NotFoundException();
+    const audience = dto.audience ?? (existing.audience as PushAudience);
+    return this.prisma.announcement.update({
+      where: { id },
+      data: {
+        ...(dto.title !== undefined ? { title: dto.title } : {}),
+        ...(dto.body !== undefined ? { body: dto.body } : {}),
+        ...(dto.imageUrl !== undefined ? { imageUrl: dto.imageUrl } : {}),
+        ...(dto.audience !== undefined ? { audience: dto.audience } : {}),
+        pastoralAreaId:
+          audience === PushAudience.PASTORAL_AREA
+            ? (dto.pastoralAreaId ?? existing.pastoralAreaId)
+            : null,
+        targetGroupId:
+          audience === PushAudience.GROUP
+            ? (dto.targetGroupId ?? existing.targetGroupId)
+            : null,
+        targetRole:
+          audience === PushAudience.ROLE
+            ? (dto.targetRole ?? existing.targetRole)
+            : null,
+      },
+    });
+  }
+
+  async remove(id: string) {
+    await this.prisma.announcement.delete({ where: { id } });
+    return { ok: true };
+  }
+
   /** 發布並分眾推播 */
   async publishAndPush(id: string) {
     const ann = await this.prisma.announcement.findUnique({ where: { id } });

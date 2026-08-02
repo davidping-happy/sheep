@@ -56,6 +56,7 @@ export default function AnnouncementsPage() {
   const [preview, setPreview] = useState<{ userCount: number } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [saveAsDraft, setSaveAsDraft] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const load = useCallback(async (jwt: string) => {
     setError('');
@@ -111,29 +112,81 @@ export default function AnnouncementsPage() {
     }
   }
 
+  function resetForm() {
+    setEditingId(null);
+    setTitle('');
+    setBody('');
+    setImageUrl('');
+    setAudience('ALL');
+    setSaveAsDraft(false);
+  }
+
+  function loadEdit(a: Announcement) {
+    setEditingId(a.id);
+    setTitle(a.title);
+    setBody(a.body);
+    setImageUrl(a.imageUrl ?? '');
+    setAudience(a.audience);
+    setPastoralAreaId(a.pastoralAreaId ?? areas[0]?.id ?? '');
+    setTargetGroupId(a.targetGroupId ?? groups[0]?.id ?? '');
+    setTargetRole(a.targetRole ?? 'MEMBER');
+    setSaveAsDraft(!a.isPublished);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   async function create(e: React.FormEvent) {
     e.preventDefault();
     if (!auth.token) return;
     setError('');
     try {
-      const created = await apiFetch<Announcement>('/announcements', {
-        method: 'POST',
-        token: auth.token,
-        body: JSON.stringify(buildPayload()),
-      });
-      if (!saveAsDraft) {
-        const pub = await apiFetch<Announcement & { push?: { userCount: number } }>(
-          `/announcements/${created.id}/publish`,
-          { method: 'POST', token: auth.token },
-        );
-        setPreview({ userCount: pub.push?.userCount ?? 0 });
+      if (editingId) {
+        await apiFetch(`/announcements/${editingId}`, {
+          method: 'PATCH',
+          token: auth.token,
+          body: JSON.stringify(buildPayload()),
+        });
+        if (!saveAsDraft) {
+          const pub = await apiFetch<Announcement & { push?: { userCount: number } }>(
+            `/announcements/${editingId}/publish`,
+            { method: 'POST', token: auth.token },
+          );
+          setPreview({ userCount: pub.push?.userCount ?? 0 });
+        }
+      } else {
+        const created = await apiFetch<Announcement>('/announcements', {
+          method: 'POST',
+          token: auth.token,
+          body: JSON.stringify(buildPayload()),
+        });
+        if (!saveAsDraft) {
+          const pub = await apiFetch<Announcement & { push?: { userCount: number } }>(
+            `/announcements/${created.id}/publish`,
+            { method: 'POST', token: auth.token },
+          );
+          setPreview({ userCount: pub.push?.userCount ?? 0 });
+        }
       }
-      setTitle('');
-      setBody('');
-      setImageUrl('');
+      resetForm();
       await load(auth.token);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '操作失敗');
+    }
+  }
+
+  async function removeAnnouncement(a: Announcement) {
+    if (!auth.token) return;
+    if (!window.confirm(`確定刪除公告「${a.title}」？此動作無法復原。`)) {
+      return;
+    }
+    try {
+      await apiFetch(`/announcements/${a.id}`, {
+        method: 'DELETE',
+        token: auth.token,
+      });
+      if (editingId === a.id) resetForm();
+      await load(auth.token);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '刪除失敗');
     }
   }
 
@@ -181,7 +234,14 @@ export default function AnnouncementsPage() {
       ) : null}
 
       <form className="card" onSubmit={create}>
-        <h3>建立公告</h3>
+        <h3>{editingId ? '編輯公告' : '建立公告'}</h3>
+        {editingId ? (
+          <p className="muted">
+            <button type="button" style={ghostBtn} onClick={resetForm}>
+              取消編輯
+            </button>
+          </p>
+        ) : null}
         <label style={labelStyle}>標題</label>
         <input
           style={inputStyle}
@@ -280,7 +340,13 @@ export default function AnnouncementsPage() {
             預估收件人數
           </button>
           <button style={primaryBtn} type="submit">
-            {saveAsDraft ? '存草稿' : '建立並發布推播'}
+            {editingId
+              ? saveAsDraft
+                ? '更新草稿'
+                : '更新並發布'
+              : saveAsDraft
+                ? '存草稿'
+                : '建立並發布推播'}
           </button>
         </div>
       </form>
@@ -316,23 +382,31 @@ export default function AnnouncementsPage() {
               />
             ) : null}
             <p style={{ whiteSpace: 'pre-wrap' }}>{a.body}</p>
-            {!a.isPublished || !a.pushSentAt ? (
-              <button
-                style={ghostBtn}
-                disabled={busyId === a.id}
-                onClick={() => publish(a.id)}
-              >
-                發布／推播
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <button style={ghostBtn} onClick={() => loadEdit(a)}>
+                編輯
               </button>
-            ) : (
-              <button
-                style={ghostBtn}
-                disabled={busyId === a.id}
-                onClick={() => publish(a.id)}
-              >
-                再次推播
+              {!a.isPublished || !a.pushSentAt ? (
+                <button
+                  style={ghostBtn}
+                  disabled={busyId === a.id}
+                  onClick={() => publish(a.id)}
+                >
+                  發布／推播
+                </button>
+              ) : (
+                <button
+                  style={ghostBtn}
+                  disabled={busyId === a.id}
+                  onClick={() => publish(a.id)}
+                >
+                  再次推播
+                </button>
+              )}
+              <button style={dangerBtn} onClick={() => removeAnnouncement(a)}>
+                刪除
               </button>
-            )}
+            </div>
           </div>
         ))}
       </div>
@@ -368,4 +442,9 @@ const ghostBtn: React.CSSProperties = {
   borderRadius: 8,
   cursor: 'pointer',
   fontSize: 13,
+};
+const dangerBtn: React.CSSProperties = {
+  ...ghostBtn,
+  color: '#b91c1c',
+  borderColor: '#fecaca',
 };

@@ -75,6 +75,7 @@ export default function EventsPage() {
   const [capacity, setCapacity] = useState('30');
   const [requiresGuardian, setRequiresGuardian] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const loadEvents = useCallback(async (jwt: string) => {
     setLoading(true);
@@ -93,33 +94,95 @@ export default function EventsPage() {
     if (auth.token) loadEvents(auth.token);
   }, [auth.token, loadEvents]);
 
+  function resetEventForm() {
+    setEditingId(null);
+    setTitle('');
+    setLocation('');
+    setImageUrls([]);
+    setCapacity('30');
+    setRequiresGuardian(false);
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    d.setMinutes(0, 0, 0);
+    setStartAt(toLocalInputValue(d));
+  }
+
+  function loadEditEvent(ev: EventItem) {
+    setEditingId(ev.id);
+    setTitle(ev.title);
+    setLocation(ev.location ?? '');
+    setStartAt(toLocalInputValue(new Date(ev.startAt)));
+    setCapacity(ev.capacity != null ? String(ev.capacity) : '');
+    setRequiresGuardian(ev.requiresGuardianConsent);
+    setImageUrls(
+      ev.imageUrls?.length
+        ? ev.imageUrls
+        : ev.coverUrl
+          ? [ev.coverUrl]
+          : [],
+    );
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!auth.token || !title.trim()) return;
     setCreating(true);
     setError('');
+    const payload = {
+      title: title.trim(),
+      location: location.trim() || undefined,
+      startAt: new Date(startAt).toISOString(),
+      capacity: capacity ? parseInt(capacity, 10) : undefined,
+      requiresGuardianConsent: requiresGuardian,
+      imageUrls,
+      coverUrl: imageUrls[0] || undefined,
+    };
     try {
-      await apiFetch<EventItem>('/events', {
-        method: 'POST',
-        token: auth.token,
-        body: JSON.stringify({
-          title: title.trim(),
-          location: location.trim() || undefined,
-          startAt: new Date(startAt).toISOString(),
-          capacity: capacity ? parseInt(capacity, 10) : undefined,
-          requiresGuardianConsent: requiresGuardian,
-          imageUrls,
-          coverUrl: imageUrls[0] || undefined,
-        }),
-      });
-      setTitle('');
-      setLocation('');
-      setImageUrls([]);
+      if (editingId) {
+        await apiFetch<EventItem>(`/events/${editingId}`, {
+          method: 'PATCH',
+          token: auth.token,
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch<EventItem>('/events', {
+          method: 'POST',
+          token: auth.token,
+          body: JSON.stringify(payload),
+        });
+      }
+      resetEventForm();
       await loadEvents(auth.token);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '建立失敗');
+      setError(err instanceof ApiError ? err.message : '儲存失敗');
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function removeEvent(ev: EventItem) {
+    if (!auth.token) return;
+    if (
+      !window.confirm(
+        `確定刪除活動「${ev.title}」？報名與簽到紀錄也會一併刪除。`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await apiFetch(`/events/${ev.id}`, {
+        method: 'DELETE',
+        token: auth.token,
+      });
+      if (editingId === ev.id) resetEventForm();
+      if (selectedId === ev.id) {
+        setSelectedId(null);
+        setQr(null);
+      }
+      await loadEvents(auth.token);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '刪除失敗');
     }
   }
 
@@ -228,7 +291,14 @@ export default function EventsPage() {
       {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
 
       <form className="card" onSubmit={handleCreate}>
-        <h3>建立活動</h3>
+        <h3>{editingId ? '編輯活動' : '建立活動'}</h3>
+        {editingId ? (
+          <p className="muted">
+            <button type="button" style={ghostBtn} onClick={resetEventForm}>
+              取消編輯
+            </button>
+          </p>
+        ) : null}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
             <label style={labelStyle}>活動名稱 *</label>
@@ -289,7 +359,7 @@ export default function EventsPage() {
           兒少活動（報名需監護人同意）
         </label>
         <button style={{ ...primaryBtn, width: 'auto', marginTop: 12 }} disabled={creating}>
-          {creating ? '建立中…' : '建立活動'}
+          {creating ? '儲存中…' : editingId ? '更新活動' : '建立活動'}
         </button>
       </form>
 
@@ -345,9 +415,17 @@ export default function EventsPage() {
                   <td style={tdStyle}>{ev.location ?? '—'}</td>
                   <td style={tdStyle}>{ev.capacity ?? '不限'}</td>
                   <td style={tdStyle}>
-                    <button style={ghostBtn} onClick={() => openRoster(ev.id)}>
-                      查看名單
-                    </button>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button style={ghostBtn} onClick={() => loadEditEvent(ev)}>
+                        編輯
+                      </button>
+                      <button style={ghostBtn} onClick={() => openRoster(ev.id)}>
+                        查看名單
+                      </button>
+                      <button style={dangerBtn} onClick={() => removeEvent(ev)}>
+                        刪除
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -486,6 +564,11 @@ const ghostBtn: React.CSSProperties = {
   borderRadius: 8,
   cursor: 'pointer',
   fontSize: 13,
+};
+const dangerBtn: React.CSSProperties = {
+  ...ghostBtn,
+  color: '#b91c1c',
+  borderColor: '#fecaca',
 };
 const tableStyle: React.CSSProperties = {
   width: '100%',

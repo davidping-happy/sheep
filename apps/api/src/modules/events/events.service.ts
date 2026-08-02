@@ -76,6 +76,49 @@ export class EventsService {
     return rows.map(withEventImages);
   }
 
+  async update(id: string, dto: CreateEventDto | Partial<CreateEventDto>) {
+    const existing = await this.prisma.event.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException();
+
+    const data: Record<string, unknown> = {};
+    if (dto.title !== undefined) data.title = dto.title;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.location !== undefined) data.location = dto.location;
+    if (dto.startAt !== undefined) data.startAt = new Date(dto.startAt);
+    if (dto.endAt !== undefined) {
+      data.endAt = dto.endAt ? new Date(dto.endAt) : null;
+    }
+    if (dto.capacity !== undefined) data.capacity = dto.capacity;
+    if (dto.registerDeadline !== undefined) {
+      data.registerDeadline = dto.registerDeadline
+        ? new Date(dto.registerDeadline)
+        : null;
+    }
+    if (dto.requiresGuardianConsent !== undefined) {
+      data.requiresGuardianConsent = dto.requiresGuardianConsent;
+    }
+    if (dto.imageUrls !== undefined || dto.coverUrl !== undefined) {
+      const imageUrls = normalizeImageUrls(
+        dto.imageUrls,
+        MAX_EVENT_IMAGES,
+        dto.coverUrl,
+      );
+      data.imageUrls = imageUrls;
+      data.coverUrl = imageUrls[0] ?? null;
+    }
+
+    const updated = await this.prisma.event.update({
+      where: { id },
+      data,
+    });
+    return withEventImages(updated);
+  }
+
+  async remove(id: string) {
+    await this.prisma.event.delete({ where: { id } });
+    return { ok: true };
+  }
+
   myRegistrations(userId: string) {
     return this.prisma.eventRegistration.findMany({
       where: { userId },

@@ -113,4 +113,9 @@ export class ArticlesService {
       data,
     });
   }
+
+  async remove(id: string) {
+    await this.prisma.article.delete({ where: { id } });
+    return { ok: true };
+  }
 }

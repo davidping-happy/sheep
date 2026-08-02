@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -81,6 +82,33 @@ export class GroupsService {
     });
   }
 
+  updateArea(
+    id: string,
+    dto: { name?: string; description?: string; photoUrl?: string },
+  ) {
+    return this.prisma.pastoralArea.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.description !== undefined
+          ? { description: dto.description }
+          : {}),
+        ...(dto.photoUrl !== undefined ? { photoUrl: dto.photoUrl } : {}),
+      },
+    });
+  }
+
+  async removeArea(id: string) {
+    const count = await this.prisma.smallGroup.count({
+      where: { pastoralAreaId: id },
+    });
+    if (count > 0) {
+      throw new BadRequestException('請先刪除該牧區下的小組，再刪牧區');
+    }
+    await this.prisma.pastoralArea.delete({ where: { id } });
+    return { ok: true };
+  }
+
   async getGroup(id: string) {
     const group = await this.prisma.smallGroup.findUnique({
       where: { id },
@@ -122,6 +150,12 @@ export class GroupsService {
       data.photoUrl = imageUrls[0] ?? null;
     }
     return this.prisma.smallGroup.update({ where: { id }, data });
+  }
+
+  async removeGroup(user: AuthUser, id: string) {
+    await this.assertCanEdit(user, id);
+    await this.prisma.smallGroup.delete({ where: { id } });
+    return { ok: true };
   }
 
   /** 小組長僅能編輯自己帶領的小組；同工/管理員不限 */

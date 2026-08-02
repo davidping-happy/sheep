@@ -1,11 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, PartialType } from '@nestjs/swagger';
 import { PushAudience, Role } from '../../common/enums';
 import {
   IsEnum,
@@ -31,6 +33,8 @@ class CreateAnnouncementDto {
   @IsOptional() @IsUUID() targetGroupId?: string;
   @IsOptional() @IsEnum(Role) targetRole?: Role;
 }
+
+class UpdateAnnouncementDto extends PartialType(CreateAnnouncementDto) {}
 
 class RegisterDeviceDto {
   @IsString() fcmToken!: string;
@@ -73,6 +77,20 @@ export class AnnouncementsController {
     @Body() dto: CreateAnnouncementDto,
   ) {
     return this.service.create(user, dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateAnnouncementDto) {
+    return this.service.update(id, dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
   }
 
   @ApiBearerAuth()

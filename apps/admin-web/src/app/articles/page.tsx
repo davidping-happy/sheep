@@ -162,6 +162,23 @@ export default function ArticlesPage() {
     }
   }
 
+  async function removeArticle(row: ArticleRow) {
+    if (!auth.token) return;
+    if (!window.confirm(`確定刪除文章「${row.title}」？此動作無法復原。`)) {
+      return;
+    }
+    try {
+      await apiFetch(`/articles/${row.id}`, {
+        method: 'DELETE',
+        token: auth.token,
+      });
+      if (editingId === row.id) resetForm();
+      await load(auth.token);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '刪除失敗');
+    }
+  }
+
   if (!auth.token) {
     return (
       <AdminLoginForm
@@ -340,12 +357,15 @@ export default function ArticlesPage() {
                   )}
                 </td>
                 <td style={tdStyle}>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <button style={ghostBtn} onClick={() => loadEdit(r.id)}>
                       編輯
                     </button>
                     <button style={ghostBtn} onClick={() => togglePublish(r)}>
                       {r.isPublished ? '下架' : '發布'}
+                    </button>
+                    <button style={dangerBtn} onClick={() => removeArticle(r)}>
+                      刪除
                     </button>
                   </div>
                 </td>
@@ -386,6 +406,11 @@ const ghostBtn: React.CSSProperties = {
   borderRadius: 8,
   cursor: 'pointer',
   fontSize: 13,
+};
+const dangerBtn: React.CSSProperties = {
+  ...ghostBtn,
+  color: '#b91c1c',
+  borderColor: '#fecaca',
 };
 const tableStyle: React.CSSProperties = {
   width: '100%',
