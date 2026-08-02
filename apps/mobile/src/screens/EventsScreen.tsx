@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { ImageGallery } from '../components/ImageGallery';
 import { api, ApiError } from '../lib/api';
 import { theme } from '../theme';
 
@@ -18,6 +19,8 @@ interface EventItem {
   title: string;
   description: string | null;
   location: string | null;
+  coverUrl?: string | null;
+  imageUrls?: string[];
   startAt: string;
   capacity: number | null;
   registerDeadline: string | null;
@@ -174,6 +177,11 @@ export default function EventsScreen() {
           const status = regs[item.id];
           return (
             <View style={styles.card}>
+              <ImageGallery
+                urls={item.imageUrls}
+                coverUrl={item.coverUrl}
+                height={160}
+              />
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.meta}>
                 {new Date(item.startAt).toLocaleString()}

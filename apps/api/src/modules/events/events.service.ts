@@ -10,12 +10,29 @@ import {
   Role,
 } from '../../common/enums';
 import { randomBytes } from 'crypto';
+import { normalizeImageUrls } from '../../common/media-urls';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { AuthUser } from '../../auth/decorators/current-user.decorator';
 import { CreateEventDto, RegisterEventDto } from './dto/event.dto';
 
 const QR_TTL_SECONDS = 30; // 動態 QR Code 每 30 秒輪替 (§6.1)
+const MAX_EVENT_IMAGES = 5;
+
+function withEventImages<
+  T extends { coverUrl?: string | null; imageUrls?: string[] },
+>(row: T) {
+  const imageUrls = normalizeImageUrls(
+    row.imageUrls,
+    MAX_EVENT_IMAGES,
+    row.coverUrl,
+  );
+  return {
+    ...row,
+    imageUrls,
+    coverUrl: imageUrls[0] ?? null,
+  };
+}
 
 /**
  * 6. 活動報名與簽到 (§6.1 / 階段三動態 QR)。
@@ -28,11 +45,18 @@ export class EventsService {
   ) {}
 
   create(user: AuthUser, dto: CreateEventDto) {
+    const imageUrls = normalizeImageUrls(
+      dto.imageUrls,
+      MAX_EVENT_IMAGES,
+      dto.coverUrl,
+    );
     return this.prisma.event.create({
       data: {
         title: dto.title,
         description: dto.description,
         location: dto.location,
+        imageUrls,
+        coverUrl: imageUrls[0] ?? null,
         startAt: new Date(dto.startAt),
         endAt: dto.endAt ? new Date(dto.endAt) : null,
         capacity: dto.capacity,
@@ -45,8 +69,11 @@ export class EventsService {
     });
   }
 
-  list() {
-    return this.prisma.event.findMany({ orderBy: { startAt: 'asc' } });
+  async list() {
+    const rows = await this.prisma.event.findMany({
+      orderBy: { startAt: 'asc' },
+    });
+    return rows.map(withEventImages);
   }
 
   myRegistrations(userId: string) {

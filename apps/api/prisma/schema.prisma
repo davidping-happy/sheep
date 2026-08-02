@@ -170,6 +170,8 @@ model Event {
   title           String
   description     String?
   location        String?
+  coverUrl        String?   // 主圖＝imageUrls[0]
+  imageUrls       String[]  @default([]) // 最多 5 張
   startAt         DateTime
   endAt           DateTime?
   capacity        Int?      // 名額上限，null=不限

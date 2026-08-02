@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ImageGalleryField } from '../../components/ImageGalleryField';
 import { apiFetch, ApiError } from '../../lib/api';
+import { resolveMediaUrl } from '../../lib/media';
 import { AdminLoginForm, useAdminAuth } from '../../lib/useAdminAuth';
 import { DynamicCheckinQr } from './DynamicCheckinQr';
 
@@ -10,6 +12,8 @@ interface EventItem {
   title: string;
   description: string | null;
   location: string | null;
+  coverUrl?: string | null;
+  imageUrls?: string[];
   startAt: string;
   capacity: number | null;
   registerDeadline: string | null;
@@ -70,6 +74,7 @@ export default function EventsPage() {
   });
   const [capacity, setCapacity] = useState('30');
   const [requiresGuardian, setRequiresGuardian] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   const loadEvents = useCallback(async (jwt: string) => {
     setLoading(true);
@@ -103,10 +108,13 @@ export default function EventsPage() {
           startAt: new Date(startAt).toISOString(),
           capacity: capacity ? parseInt(capacity, 10) : undefined,
           requiresGuardianConsent: requiresGuardian,
+          imageUrls,
+          coverUrl: imageUrls[0] || undefined,
         }),
       });
       setTitle('');
       setLocation('');
+      setImageUrls([]);
       await loadEvents(auth.token);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '建立失敗');
@@ -263,6 +271,15 @@ export default function EventsPage() {
             />
           </div>
         </div>
+        {auth.token ? (
+          <ImageGalleryField
+            label="活動圖片"
+            token={auth.token}
+            value={imageUrls}
+            onChange={setImageUrls}
+            max={5}
+          />
+        ) : null}
         <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
           <input
             type="checkbox"
@@ -295,12 +312,34 @@ export default function EventsPage() {
               {events.map((ev) => (
                 <tr key={ev.id} style={selectedId === ev.id ? { background: '#f6e6de' } : undefined}>
                   <td style={tdStyle}>
-                    {ev.title}
-                    {ev.requiresGuardianConsent ? (
-                      <span className="badge" style={{ marginLeft: 6 }}>
-                        兒少
-                      </span>
-                    ) : null}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {resolveMediaUrl(ev.coverUrl ?? ev.imageUrls?.[0]) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={resolveMediaUrl(ev.coverUrl ?? ev.imageUrls?.[0])!}
+                          alt=""
+                          style={{
+                            width: 40,
+                            height: 40,
+                            objectFit: 'cover',
+                            borderRadius: 6,
+                          }}
+                        />
+                      ) : null}
+                      <div>
+                        {ev.title}
+                        {ev.requiresGuardianConsent ? (
+                          <span className="badge" style={{ marginLeft: 6 }}>
+                            兒少
+                          </span>
+                        ) : null}
+                        {(ev.imageUrls?.length ?? 0) > 0 ? (
+                          <div className="muted" style={{ fontSize: 12 }}>
+                            圖片 {ev.imageUrls!.length} 張
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
                   </td>
                   <td style={tdStyle}>{new Date(ev.startAt).toLocaleString()}</td>
                   <td style={tdStyle}>{ev.location ?? '—'}</td>
