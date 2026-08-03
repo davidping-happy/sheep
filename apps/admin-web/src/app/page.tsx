@@ -25,6 +25,12 @@ export default function DashboardPage() {
           {API_BASE}
         </a>
       </p>
+      <p className="muted">
+        iPhone／網頁測試（免 Expo）：{' '}
+        <a href="/app/" target="_blank" rel="noreferrer">
+          /app/
+        </a>
+      </p>
       <div className="grid">
         {MODULES.map((m) => (
           <a

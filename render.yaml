@@ -52,7 +52,8 @@ services:
     plan: free
     rootDir: apps/admin-web
     # 必須 -H 0.0.0.0，否則 Render 對外連不到（白屏／逾時）
-    buildCommand: npm install --legacy-peer-deps --include=dev && npm run build
+    # build:render 會把行動端網頁版嵌入 /app（iPhone Safari 測試，免 Expo 登入）
+    buildCommand: npm install --legacy-peer-deps --include=dev && npm run build:render
     startCommand: npx next start -H 0.0.0.0 -p $PORT
     healthCheckPath: /
     envVars:
@@ -61,6 +62,8 @@ services:
       - key: HOSTNAME
         value: "0.0.0.0"
       - key: NEXT_PUBLIC_API_BASE
+        value: https://churchsheep-api.onrender.com/api
+      - key: EXPO_PUBLIC_API_BASE
         value: https://churchsheep-api.onrender.com/api
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"

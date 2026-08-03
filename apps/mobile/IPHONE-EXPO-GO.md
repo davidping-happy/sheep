@@ -1,13 +1,13 @@
-# iPhone 測試（Expo Go，免 Apple Developer）
+# iPhone 測試（Safari 網頁版，免 Expo 登入）
 
-不做 TestFlight／不繳年費時，iPhone 請用這個方式。
+> Expo Go 自 2026/5 起**只允許開啟自己帳號的專案**，測試者會被要求登入 Expo 且無法安裝。  
+> 改用下方 **Safari 網頁版**：不必裝 Expo Go、不必 Expo 帳號、不必 Apple Developer。
 
 ## 建議流程（給測試者）
 
-1. App Store 安裝 **Expo Go**（需支援 **SDK 54**；若打不開專案，先更新 Expo Go）
-2. 用 **Safari** 打開下方連結（不要用 LINE 內建瀏覽器）
-3. 點 **Open with Expo Go**
-4. 看到「成二牧區」或「社青牧區」登入畫面後，註冊（密碼至少 10 字）即可測
+1. iPhone 用 **Safari** 打開下方連結（不要用 LINE 內建瀏覽器；可「用 Safari 開啟」）
+2. 看到牧區登入畫面後，註冊（密碼至少 10 字）即可測
+3. （可選）Safari 底部分享 → **加入主畫面**，之後像 App 一樣點開
 
 > 第一次開啟若很慢：雲端 API 在喚醒（約 30～60 秒），多等一下。
 
@@ -15,17 +15,13 @@
 
 ## 成二牧區
 
-https://expo.dev/accounts/davidping/projects/churchsheep/updates/f94c0c16-53b7-4ea0-933e-7e82320f30ea
-
-專案頁：https://expo.dev/accounts/davidping/projects/churchsheep
+https://churchsheep-admin.onrender.com/app/
 
 ---
 
 ## 社青牧區
 
-https://expo.dev/accounts/davidping/projects/youngadult/updates/b8fff188-d2b8-44ae-9bdb-4565dc4b3fff
-
-專案頁：https://expo.dev/accounts/davidping/projects/youngadult
+https://youngadult-admin.onrender.com/app/
 
 ---
 
@@ -33,16 +29,16 @@ https://expo.dev/accounts/davidping/projects/youngadult/updates/b8fff188-d2b8-44
 
 ```
 【牧區 App iPhone 測試】
-1. App Store 安裝「Expo Go」並更新到最新
-2. 用 Safari 打開連結，點 Open with Expo Go
+請用 Safari 打開（勿用 LINE 內建瀏覽器）：
 
 成二：
-https://expo.dev/accounts/davidping/projects/churchsheep/updates/f94c0c16-53b7-4ea0-933e-7e82320f30ea
+https://churchsheep-admin.onrender.com/app/
 
 社青：
-https://expo.dev/accounts/davidping/projects/youngadult/updates/b8fff188-d2b8-44ae-9bdb-4565dc4b3fff
+https://youngadult-admin.onrender.com/app/
 
 註冊密碼至少 10 字。第一次可能等 30～60 秒。
+可選：Safari 分享 → 加入主畫面。
 ```
 
 ---
@@ -51,9 +47,11 @@ https://expo.dev/accounts/davidping/projects/youngadult/updates/b8fff188-d2b8-44
 
 | 項目 | 說明 |
 |------|------|
-| 必須裝 Expo Go | iPhone 無法像 Android 那樣直接裝 APK |
-| LINE | 請「用 Safari 開啟」連結，內建瀏覽器常打不開 |
-| 與正式 App 差異 | 圖示會是 Expo Go，不是獨立桌面圖示 |
-| 之後若要免 Expo | 再考慮 Apple Developer + TestFlight（年費） |
+| 不必 Expo Go | 用 Safari 開即可 |
+| 不必 Expo 帳號 | 不會再出現「Log in to Expo」 |
+| LINE | 請「用 Safari 開啟」連結 |
+| 與原生 App 差異 | 是網頁版；可「加入主畫面」較像 App |
+| Android | 仍建議用 GitHub APK，見 [TEST-LINKS.md](./TEST-LINKS.md) |
+| 之後若要正式上架 | 再考慮 Apple Developer + TestFlight（年費） |
 
-Android 仍用 GitHub APK 直連（不必 Expo），見 [TEST-LINKS.md](./TEST-LINKS.md)。
+本機開發預覽：`cd apps/mobile && npx expo start --web`

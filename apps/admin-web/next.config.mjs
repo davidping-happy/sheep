@@ -7,6 +7,17 @@ const nextConfig = {
       process.env.NEXT_PUBLIC_API_BASE ??
       'https://churchsheep-api.onrender.com/api',
   },
+  async rewrites() {
+    // Expo Web SPA：未知路徑回到 index.html
+    return [
+      { source: '/app', destination: '/app/index.html' },
+      { source: '/app/', destination: '/app/index.html' },
+      {
+        source: '/app/:path((?!_expo|assets|favicon).*)',
+        destination: '/app/index.html',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

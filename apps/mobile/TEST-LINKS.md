@@ -25,6 +25,8 @@ https://github.com/davidping-happy/sheep/releases/download/v1.1.0-preview/church
 註冊密碼至少 10 字。第一次可能等 30～60 秒。
 ```
 
-## iPhone（Expo Go，免年費）
+## iPhone（Safari 網頁版，免 Expo／免年費）
 
-見 [IPHONE-EXPO-GO.md](./IPHONE-EXPO-GO.md)。不走 TestFlight。
+https://churchsheep-admin.onrender.com/app/
+
+用 Safari 開啟即可（不必 Expo Go、不必 Expo 帳號）。詳見 [IPHONE-EXPO-GO.md](./IPHONE-EXPO-GO.md)。
