@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
-    "build:render": "node scripts/embed-mobile-web.mjs && (node scripts/fetch-apk.mjs || true) && next build",
+    "build:render": "node scripts/embed-mobile-web.mjs && next build",
     "embed:mobile": "node scripts/embed-mobile-web.mjs",
     "fetch:apk": "node scripts/fetch-apk.mjs",
     "start": "next start -H 0.0.0.0 -p 3001",

@@ -1,31 +1,30 @@
 # 成二牧區 App — Android 測試下載（不必 Expo）
 
-直接安裝 APK，不用 Expo Go。
+> Expo／GitHub 下載在台灣／LINE 常會卡住，請用下方 **API 鏡射**。
 
 ## 建議下載（請用 Chrome 開）
 
-https://churchsheep-admin.onrender.com/download
+下載說明頁：https://churchsheep-admin.onrender.com/download
 
-主要 APK（本站鏡射）：  
-https://churchsheep-admin.onrender.com/downloads/churchsheep-latest.apk
-
-GitHub：  
-https://github.com/davidping-happy/sheep/releases/download/v1.1.2-preview/churchsheep-1.1.2.apk
-
-Expo 直連：  
-https://expo.dev/artifacts/eas/PltucSQGvFlPkzoTHzkeQPZAwKBbVmHRFCkDthacF_I.apk
+**主要 APK（API 鏡射）：**  
+https://churchsheep-api.onrender.com/downloads/churchsheep-latest.apk
 
 1. 用 **Chrome** 打開（不要用 LINE 內建瀏覽器）
-2. 下載完到「檔案／下載」點 APK 安裝（覆蓋舊版 1.1.2）
+2. 下載完到「檔案／下載」點 APK 安裝（覆蓋 1.1.2）
 3. 允許「未知來源」後開啟 **成二牧區**
+
+### 備用
+
+- GitHub：https://github.com/davidping-happy/sheep/releases/download/v1.1.2-preview/churchsheep-1.1.2.apk
+- Expo：https://expo.dev/artifacts/eas/PltucSQGvFlPkzoTHzkeQPZAwKBbVmHRFCkDthacF_I.apk
 
 ## 短訊範本
 
 ```
 【成二牧區 App 1.1.2】
 請用 Chrome 打開（勿用 LINE）：
-https://churchsheep-admin.onrender.com/download
-點「主要下載」覆蓋安裝。
+https://churchsheep-api.onrender.com/downloads/churchsheep-latest.apk
+下載後覆蓋安裝。
 
 iPhone 用 Safari：
 https://churchsheep-admin.onrender.com/app/

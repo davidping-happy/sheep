@@ -15,7 +15,8 @@ services:
     plan: free
     rootDir: apps/api
     # 免費方案 build 常省略 devDependencies；必須 --include=dev 才能跑 tsc / prisma
-    buildCommand: npm install --legacy-peer-deps --include=dev && npx prisma generate && npm run build
+    # build:render also mirrors Android APK to /downloads (for TW testers)
+    buildCommand: npm install --legacy-peer-deps --include=dev && npx prisma generate && npm run build:render
     startCommand: npm run start:render
     healthCheckPath: /api/health
     envVars:
@@ -27,6 +28,10 @@ services:
         fromDatabase:
           name: churchsheep-db
           property: connectionString
+      - key: APK_MIRROR_URL
+        value: https://expo.dev/artifacts/eas/PltucSQGvFlPkzoTHzkeQPZAwKBbVmHRFCkDthacF_I.apk
+      - key: APK_FILE_NAME
+        value: churchsheep-1.1.2.apk
       - key: CORS_ORIGINS
         value: "http://localhost:3001,http://127.0.0.1:3001,http://localhost:8081,http://127.0.0.1:8081,https://churchsheep-admin.onrender.com"
       - key: JWT_ACCESS_SECRET

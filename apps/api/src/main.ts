@@ -2,12 +2,28 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
+
+  // APK mirror for Android testers (avoid GitHub/Expo stall in TW)
+  app.useStaticAssets(join(process.cwd(), 'public'), {
+    index: false,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.apk')) {
+        res.setHeader(
+          'Content-Type',
+          'application/vnd.android.package-archive',
+        );
+        res.setHeader('Content-Disposition', 'attachment');
+      }
+    },
+  });
 
   // 安全標頭 (§四.5 PLATFORM)
   app.use(helmet());

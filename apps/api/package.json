@@ -5,6 +5,8 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true});try{fs.unlinkSync('tsconfig.tsbuildinfo')}catch{}\" && tsc -p tsconfig.json",
+    "build:render": "npm run build && node scripts/fetch-apk.mjs",
+    "fetch:apk": "node scripts/fetch-apk.mjs",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
