@@ -1,9 +1,8 @@
 const PRIMARY = '/downloads/churchsheep-latest.apk';
 const GITHUB =
   'https://github.com/davidping-happy/sheep/releases/download/v1.1.2-preview/churchsheep-1.1.2.apk';
-/** Updated after each EAS build */
 const EXPO =
-  'https://github.com/davidping-happy/sheep/releases/download/v1.1.2-preview/churchsheep-1.1.2.apk';
+  'https://expo.dev/artifacts/eas/PltucSQGvFlPkzoTHzkeQPZAwKBbVmHRFCkDthacF_I.apk';
 const RELEASE =
   'https://github.com/davidping-happy/sheep/releases/tag/v1.1.2-preview';
 
@@ -45,7 +44,7 @@ export default function DownloadPage() {
       <ul style={{ lineHeight: 1.8 }}>
         <li>
           <a href={EXPO} target="_blank" rel="noreferrer">
-            備用 1：直連 APK
+            備用 1：Expo 直連
           </a>
         </li>
         <li>

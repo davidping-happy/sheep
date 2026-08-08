@@ -12,6 +12,9 @@ https://churchsheep-admin.onrender.com/downloads/churchsheep-latest.apk
 GitHub：  
 https://github.com/davidping-happy/sheep/releases/download/v1.1.2-preview/churchsheep-1.1.2.apk
 
+Expo 直連：  
+https://expo.dev/artifacts/eas/PltucSQGvFlPkzoTHzkeQPZAwKBbVmHRFCkDthacF_I.apk
+
 1. 用 **Chrome** 打開（不要用 LINE 內建瀏覽器）
 2. 下載完到「檔案／下載」點 APK 安裝（覆蓋舊版 1.1.2）
 3. 允許「未知來源」後開啟 **成二牧區**
