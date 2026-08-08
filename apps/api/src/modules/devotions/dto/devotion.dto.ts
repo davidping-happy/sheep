@@ -1,4 +1,4 @@
-import { Visibility } from '../../../common/enums';
+import { DevotionCategory, Visibility } from '../../../common/enums';
 import {
   IsDateString,
   IsEnum,
@@ -8,12 +8,15 @@ import {
   MaxLength,
 } from 'class-validator';
 
-/** 晨禱筆記內容上限（字元） */
+/** 靈修隨記內容上限（字元） */
 const CONTENT_MAX = 800;
 
 export class CreateDevotionDto {
   @IsDateString()
   noteDate!: string;
+
+  @IsEnum(DevotionCategory)
+  category!: DevotionCategory;
 
   @IsOptional()
   @IsString()
@@ -34,6 +37,10 @@ export class CreateDevotionDto {
 }
 
 export class UpdateDevotionDto {
+  @IsOptional()
+  @IsEnum(DevotionCategory)
+  category?: DevotionCategory;
+
   @IsOptional()
   @IsString()
   @MaxLength(200)

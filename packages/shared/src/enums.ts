@@ -39,6 +39,13 @@ export enum ArticleCategory {
   OTHER = 'OTHER',
 }
 
+/** 靈修隨記分類 */
+export enum DevotionCategory {
+  SERMON = 'SERMON',
+  MORNING_PRAYER = 'MORNING_PRAYER',
+  DEVOTION = 'DEVOTION',
+}
+
 /** 推播分眾目標類型（§二.5 分眾發送）*/
 export enum PushAudience {
   ALL = 'ALL',

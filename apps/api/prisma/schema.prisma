@@ -71,15 +71,17 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
-// ─────────────────────── 1. 晨禱靈修筆記 ───────────────────────
+// ─────────────────────── 1. 靈修隨記 ───────────────────────
 // 個人資料，需嚴格權限隔離；contentEncrypted 為 AES-256 應用層加密密文 (§四.1)。
 // visibility 值：PRIVATE | GROUP | PUBLIC（預設 PRIVATE）
+// category 值：SERMON | MORNING_PRAYER | DEVOTION
 
 model DevotionNote {
   id              String     @id @default(uuid())
   author          User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId        String
   noteDate        DateTime
+  category        String     @default("DEVOTION") // SERMON | MORNING_PRAYER | DEVOTION
   scriptureRef    String?    // 經文出處
   contentEncrypted String    // 加密後密文，資料庫層不可讀
   visibility      String     @default("PRIVATE")
@@ -88,6 +90,7 @@ model DevotionNote {
   updatedAt       DateTime   @updatedAt
 
   @@index([authorId, noteDate])
+  @@index([authorId, category])
   @@map("devotion_notes")
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "@churchsheep/mobile",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "成二牧區行動端 — React Native (Expo)",
   "private": true,
   "main": "index.ts",

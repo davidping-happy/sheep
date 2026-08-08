@@ -3,14 +3,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Visibility } from '../../common/enums';
+import { DevotionCategory, Visibility } from '../../common/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FieldEncryptionService } from '../../common/crypto/field-encryption.service';
 import { CreateDevotionDto, UpdateDevotionDto } from './dto/devotion.dto';
 
 /**
- * 1. 晨禱靈修筆記 — 個人資料，嚴格權限隔離 (§二.1 / §四.1)。
+ * 1. 靈修隨記 — 個人資料，嚴格權限隔離 (§二.1 / §四.1)。
  *  - 內容以 AES-256 加密後才存 DB
+ *  - 分類：講道／晨禱／靈修
  *  - 預設 PRIVATE；只有本人可讀寫；GROUP 才對小組成員可見
  */
 @Injectable()
@@ -25,6 +26,7 @@ export class DevotionsService {
       data: {
         authorId: userId,
         noteDate: new Date(dto.noteDate),
+        category: dto.category ?? DevotionCategory.DEVOTION,
         scriptureRef: dto.scriptureRef,
         contentEncrypted: this.crypto.encrypt(dto.content),
         visibility: dto.visibility ?? Visibility.PRIVATE,
@@ -92,6 +94,7 @@ export class DevotionsService {
     const note = await this.prisma.devotionNote.update({
       where: { id },
       data: {
+        category: dto.category,
         scriptureRef: dto.scriptureRef,
         contentEncrypted: dto.content
           ? this.crypto.encrypt(dto.content)

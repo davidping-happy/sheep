@@ -30,6 +30,11 @@ export default function DashboardPage() {
         <a href="/app/" target="_blank" rel="noreferrer">
           /app/
         </a>
+        {' · '}
+        Android APK：{' '}
+        <a href="/download" target="_blank" rel="noreferrer">
+          /download
+        </a>
       </p>
       <div className="grid">
         {MODULES.map((m) => (

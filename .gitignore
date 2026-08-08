@@ -54,3 +54,4 @@ dist-apk/
 
 apps/mobile/dist/
 apps/admin-web/public/app/
+apps/admin-web/public/downloads/

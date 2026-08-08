@@ -18,9 +18,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../lib/api';
 import { theme } from '../theme';
 
+type DevotionCategory = 'SERMON' | 'MORNING_PRAYER' | 'DEVOTION';
+
 interface DevotionNote {
   id: string;
   noteDate: string;
+  category?: DevotionCategory | string | null;
   scriptureRef: string | null;
   content: string;
   visibility: string;
@@ -29,13 +32,23 @@ interface DevotionNote {
 
 const CONTENT_MAX = 800;
 
+const CATEGORIES: { value: DevotionCategory; label: string }[] = [
+  { value: 'SERMON', label: '講道' },
+  { value: 'MORNING_PRAYER', label: '晨禱' },
+  { value: 'DEVOTION', label: '靈修' },
+];
+
+function categoryLabel(value?: string | null) {
+  return CATEGORIES.find((c) => c.value === value)?.label ?? '靈修';
+}
+
 function todayISO() {
   const d = new Date();
   return d.toISOString().slice(0, 10);
 }
 
 /**
- * 晨禱靈修筆記：雲端同步、AES 加密儲存、預設私人。
+ * 靈修隨記：雲端同步、AES 加密儲存、預設私人；可選講道／晨禱／靈修。
  */
 export default function DevotionsScreen() {
   const insets = useSafeAreaInsets();
@@ -46,6 +59,7 @@ export default function DevotionsScreen() {
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<DevotionNote | null>(null);
   const [noteDate, setNoteDate] = useState(todayISO());
+  const [category, setCategory] = useState<DevotionCategory>('DEVOTION');
   const [scriptureRef, setScriptureRef] = useState('');
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
@@ -70,6 +84,7 @@ export default function DevotionsScreen() {
   function openCreate() {
     setEditing(null);
     setNoteDate(todayISO());
+    setCategory('DEVOTION');
     setScriptureRef('');
     setContent('');
     setModal(true);
@@ -78,6 +93,10 @@ export default function DevotionsScreen() {
   function openEdit(n: DevotionNote) {
     setEditing(n);
     setNoteDate(String(n.noteDate).slice(0, 10));
+    setCategory(
+      (CATEGORIES.find((c) => c.value === n.category)?.value as DevotionCategory) ??
+        'DEVOTION',
+    );
     setScriptureRef(n.scriptureRef ?? '');
     setContent(n.content);
     setModal(true);
@@ -96,6 +115,7 @@ export default function DevotionsScreen() {
         await api(`/devotions/${editing.id}`, {
           method: 'PATCH',
           body: JSON.stringify({
+            category,
             scriptureRef: scriptureRef || undefined,
             content: content.trim(),
           }),
@@ -105,6 +125,7 @@ export default function DevotionsScreen() {
           method: 'POST',
           body: JSON.stringify({
             noteDate: new Date(noteDate).toISOString(),
+            category,
             scriptureRef: scriptureRef || undefined,
             content: content.trim(),
             visibility: 'PRIVATE',
@@ -171,14 +192,21 @@ export default function DevotionsScreen() {
           />
         }
         ListEmptyComponent={
-          <Text style={styles.empty}>尚無筆記，點右上角開始寫晨禱。</Text>
+          <Text style={styles.empty}>尚無筆記，點右上角開始寫靈修隨記。</Text>
         }
         renderItem={({ item }) => (
           <Pressable style={styles.card} onPress={() => openEdit(item)}>
             <View style={styles.row}>
-              <Text style={styles.date}>
-                {String(item.noteDate).slice(0, 10)}
-              </Text>
+              <View style={styles.meta}>
+                <Text style={styles.date}>
+                  {String(item.noteDate).slice(0, 10)}
+                </Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {categoryLabel(item.category)}
+                  </Text>
+                </View>
+              </View>
               <Pressable onPress={() => confirmDelete(item)}>
                 <Text style={styles.del}>刪除</Text>
               </Pressable>
@@ -205,7 +233,7 @@ export default function DevotionsScreen() {
             ]}
           >
             <Text style={styles.modalTitle}>
-              {editing ? '編輯筆記' : '新增晨禱筆記'}
+              {editing ? '編輯靈修隨記' : '新增靈修隨記'}
             </Text>
             <ScrollView
               style={styles.modalBody}
@@ -224,6 +252,25 @@ export default function DevotionsScreen() {
                   />
                 </>
               ) : null}
+              <Text style={styles.label}>分類</Text>
+              <View style={styles.chips}>
+                {CATEGORIES.map((c) => {
+                  const active = category === c.value;
+                  return (
+                    <Pressable
+                      key={c.value}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setCategory(c.value)}
+                    >
+                      <Text
+                        style={[styles.chipText, active && styles.chipTextActive]}
+                      >
+                        {c.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
               <Text style={styles.label}>經文出處（選填）</Text>
               <TextInput
                 style={styles.input}
@@ -309,7 +356,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 6,
   },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   date: { fontSize: 13, fontWeight: '600', color: theme.color.brand },
+  badge: {
+    backgroundColor: theme.color.brandSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  badgeText: { fontSize: 12, color: theme.color.brand, fontWeight: '600' },
   del: { fontSize: 13, color: theme.color.danger },
   ref: { fontSize: 13, color: theme.color.inkMuted, marginBottom: 4 },
   preview: { fontSize: 15, lineHeight: 22, color: theme.color.ink },
@@ -343,6 +398,21 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   label: { fontSize: 12, color: theme.color.inkMuted },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.color.border,
+    backgroundColor: theme.color.bgElevated,
+  },
+  chipActive: {
+    backgroundColor: theme.color.brand,
+    borderColor: theme.color.brand,
+  },
+  chipText: { fontSize: 14, color: theme.color.ink, fontWeight: '500' },
+  chipTextActive: { color: theme.color.brandInk },
   counter: {
     fontSize: 12,
     color: theme.color.inkMuted,
@@ -359,7 +429,6 @@ const styles = StyleSheet.create({
     color: theme.color.ink,
     backgroundColor: theme.color.bgElevated,
   },
-  // 固定高度＋內部捲動，避免把「儲存」擠出畫面
   textarea: { minHeight: 140, maxHeight: 220 },
   modalActions: {
     flexDirection: 'row',
