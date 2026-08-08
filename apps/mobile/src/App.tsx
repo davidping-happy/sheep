@@ -16,9 +16,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import type { HomeStackParamList, MainTabParamList } from './navigation/types';
 import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
-import FavoritesScreen from './screens/FavoritesScreen';
 import ProfileScreen from './screens/ProfileScreen';
-import MoreScreen from './screens/MoreScreen';
 import DevotionsScreen from './screens/DevotionsScreen';
 import LivestreamScreen from './screens/LivestreamScreen';
 import ArticlesScreen from './screens/ArticlesScreen';
@@ -93,7 +91,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen
         name="Devotions"
         component={DevotionsScreen}
-        options={{ title: '晨禱靈修筆記' }}
+        options={{ title: '靈修隨記' }}
       />
     </HomeStack.Navigator>
   );
@@ -148,32 +146,12 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="FavoritesTab"
-        component={FavoritesScreen}
-        options={{
-          title: '我的最愛',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="heart" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
         name="ProfileTab"
         component={ProfileScreen}
         options={{
           title: '個人中心',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="MoreTab"
-        component={MoreScreen}
-        options={{
-          title: '更多',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="menu" size={size} color={color} />
           ),
         }}
       />

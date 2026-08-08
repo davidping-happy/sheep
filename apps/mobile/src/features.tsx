@@ -30,8 +30,8 @@ export const FEATURES: FeatureDef[] = [
   },
   {
     key: 'Devotions',
-    title: '晨禱靈修筆記',
-    desc: '每日與主親近',
+    title: '靈修隨記',
+    desc: '講道・晨禱・靈修筆記',
     icon: 'create-outline',
     family: 'ion',
     color: '#6B8F71',

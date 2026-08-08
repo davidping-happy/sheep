@@ -18,7 +18,5 @@ export type RootStackParamList = HomeStackParamList;
 
 export type MainTabParamList = {
   HomeTab: NavigatorScreenParams<HomeStackParamList> | undefined;
-  FavoritesTab: undefined;
   ProfileTab: undefined;
-  MoreTab: undefined;
 };

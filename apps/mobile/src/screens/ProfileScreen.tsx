@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useAuth } from '../auth/AuthContext';
+import { ServerSettingsModal } from '../components/ServerSettingsModal';
+import { getApiBase } from '../lib/api-base';
 import { tokenStore } from '../lib/secure-store';
 import { theme } from '../theme';
 
@@ -26,10 +29,18 @@ function decodeEmail(token: string | null): string {
 export default function ProfileScreen() {
   const { signOut } = useAuth();
   const [email, setEmail] = useState('');
+  const [serverOpen, setServerOpen] = useState(false);
+  const [apiBase, setApiBaseLabel] = useState('');
+  const version =
+    Constants.expoConfig?.version ?? Constants.nativeAppVersion ?? '1.1.0';
 
   useEffect(() => {
     tokenStore.getAccess().then((t) => setEmail(decodeEmail(t)));
   }, []);
+
+  useEffect(() => {
+    getApiBase().then(setApiBaseLabel);
+  }, [serverOpen]);
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.pad}>
@@ -43,8 +54,25 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <Row icon="home-outline" label="所屬牧區" value={theme.brandName} />
-        <Row icon="people-outline" label="身份" value="會友" last />
+        <Row icon="people-outline" label="身份" value="會友" />
+        <Pressable
+          style={({ pressed }) => [styles.row, pressed && { opacity: 0.8 }]}
+          onPress={() => setServerOpen(true)}
+        >
+          <Ionicons name="server-outline" size={18} color={theme.color.inkMuted} />
+          <Text style={styles.rowLabel}>伺服器連線設定</Text>
+          <Text style={styles.rowValue} numberOfLines={1}>
+            {apiBase || '…'}
+          </Text>
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color={theme.color.inkMuted}
+          />
+        </Pressable>
       </View>
+
+      <Text style={styles.ver}>App 版本 {version}</Text>
 
       <Pressable
         style={({ pressed }) => [styles.logout, pressed && { opacity: 0.85 }]}
@@ -53,6 +81,12 @@ export default function ProfileScreen() {
         <Ionicons name="log-out-outline" size={20} color={theme.color.danger} />
         <Text style={styles.logoutText}>登出</Text>
       </Pressable>
+
+      <ServerSettingsModal
+        visible={serverOpen}
+        current={apiBase}
+        onClose={() => setServerOpen(false)}
+      />
     </ScrollView>
   );
 }
@@ -112,9 +146,20 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.color.border,
   },
   rowLabel: { flex: 1, fontSize: 15, color: theme.color.ink },
-  rowValue: { fontSize: 14, color: theme.color.inkMuted },
+  rowValue: {
+    fontSize: 14,
+    color: theme.color.inkMuted,
+    maxWidth: '42%',
+    textAlign: 'right',
+  },
+  ver: {
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 12,
+    color: theme.color.inkMuted,
+  },
   logout: {
-    marginTop: 24,
+    marginTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
