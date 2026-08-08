@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../lib/api';
 import { theme } from '../theme';
@@ -63,6 +64,10 @@ export default function DevotionsScreen() {
   const [scriptureRef, setScriptureRef] = useState('');
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState<
+    DevotionCategory | 'ALL'
+  >('ALL');
 
   const load = useCallback(async () => {
     setError('');
@@ -160,6 +165,26 @@ export default function DevotionsScreen() {
     }
   }
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((n) => {
+      if (filterCategory !== 'ALL') {
+        const cat = (n.category as DevotionCategory) || 'DEVOTION';
+        if (cat !== filterCategory) return false;
+      }
+      if (!q) return true;
+      const hay = [
+        n.content,
+        n.scriptureRef ?? '',
+        categoryLabel(n.category),
+        String(n.noteDate).slice(0, 10),
+      ]
+        .join('\n')
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [items, query, filterCategory]);
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -176,12 +201,74 @@ export default function DevotionsScreen() {
           <Text style={styles.addBtnText}>＋ 新筆記</Text>
         </Pressable>
       </View>
+
+      <View style={styles.searchWrap}>
+        <View style={styles.searchBox}>
+          <Ionicons
+            name="search"
+            size={18}
+            color={theme.color.inkMuted}
+            style={{ marginRight: 8 }}
+          />
+          <TextInput
+            style={styles.searchInput}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="搜尋過去筆記、經文、日期…"
+            placeholderTextColor={theme.color.inkMuted}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {query ? (
+            <Pressable onPress={() => setQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color={theme.color.inkMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {(
+            [
+              { value: 'ALL' as const, label: '全部' },
+              ...CATEGORIES,
+            ] as { value: DevotionCategory | 'ALL'; label: string }[]
+          ).map((c) => {
+            const active = filterCategory === c.value;
+            return (
+              <Pressable
+                key={c.value}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setFilterCategory(c.value)}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    active && styles.filterChipTextActive,
+                  ]}
+                >
+                  {c.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+        {query.trim() || filterCategory !== 'ALL' ? (
+          <Text style={styles.resultCount}>
+            {filtered.length}／{items.length} 筆
+          </Text>
+        ) : null}
+      </View>
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <FlatList
-        data={items}
+        data={filtered}
         keyExtractor={(i) => i.id}
         contentContainerStyle={styles.list}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -192,7 +279,11 @@ export default function DevotionsScreen() {
           />
         }
         ListEmptyComponent={
-          <Text style={styles.empty}>尚無筆記，點右上角開始寫靈修隨記。</Text>
+          <Text style={styles.empty}>
+            {items.length === 0
+              ? '尚無筆記，點右上角開始寫靈修隨記。'
+              : '找不到符合的筆記，請換關鍵字或分類。'}
+          </Text>
         }
         renderItem={({ item }) => (
           <Pressable style={styles.card} onPress={() => openEdit(item)}>
@@ -342,6 +433,47 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
   },
   addBtnText: { color: theme.color.brandInk, fontWeight: '600' },
+  searchWrap: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 4,
+    backgroundColor: theme.color.bg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.color.border,
+    gap: 8,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.color.bgElevated,
+    borderWidth: 1,
+    borderColor: theme.color.border,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: 12,
+    minHeight: 44,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: theme.color.ink,
+    paddingVertical: 8,
+  },
+  filterRow: { gap: 8, paddingRight: 8 },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.color.border,
+    backgroundColor: theme.color.bgElevated,
+  },
+  filterChipActive: {
+    backgroundColor: theme.color.brand,
+    borderColor: theme.color.brand,
+  },
+  filterChipText: { fontSize: 13, color: theme.color.ink, fontWeight: '500' },
+  filterChipTextActive: { color: theme.color.brandInk },
+  resultCount: { fontSize: 12, color: theme.color.inkMuted },
   list: { padding: 16, paddingBottom: 40 },
   card: {
     backgroundColor: theme.color.bgElevated,
