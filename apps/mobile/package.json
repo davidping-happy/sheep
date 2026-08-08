@@ -1,7 +1,7 @@
 {
   "name": "@churchsheep/mobile",
-  "version": "1.1.2",
-  "description": "æˆäºŒç‰§å€è¡Œå‹•ç«¯ â€” React Native (Expo)",
+  "version": "1.1.3",
+  "description": "?ä??§å?è¡Œå?ç«???React Native (Expo)",
   "private": true,
   "main": "index.ts",
   "scripts": {
@@ -16,7 +16,7 @@
     "apk:status": "eas build:list --platform android --limit 5",
     "ios:build": "eas build --platform ios --profile production",
     "ios:submit": "eas submit --platform ios --profile production --latest",
-    "update:preview": "eas update --branch preview --message \"æˆäºŒç‰§å€æ¸¬è©¦ç‰ˆ\""
+    "update:preview": "eas update --branch preview --message \"?ä??§å?æ¸¬è©¦?ˆ\""
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
