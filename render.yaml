@@ -65,5 +65,9 @@ services:
         value: https://churchsheep-api.onrender.com/api
       - key: EXPO_PUBLIC_API_BASE
         value: https://churchsheep-api.onrender.com/api
+      - key: APK_MIRROR_URL
+        value: https://expo.dev/artifacts/eas/PltucSQGvFlPkzoTHzkeQPZAwKBbVmHRFCkDthacF_I.apk
+      - key: APK_FILE_NAME
+        value: churchsheep-1.1.2.apk
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
