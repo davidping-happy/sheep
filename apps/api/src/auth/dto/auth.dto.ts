@@ -11,7 +11,7 @@ export class RegisterDto {
   email!: string;
 
   @IsString()
-  @MinLength(10) // 建議搭配前端密碼強度檢查
+  @MinLength(6)
   password!: string;
 
   @IsString()

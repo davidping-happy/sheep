@@ -89,7 +89,7 @@ https://github.com/davidping-happy/sheep/releases/download/v1.1.0-preview/church
 > 1. 用 Chrome 打開連結下載（不要用 LINE 內建瀏覽器）
 > 2. 到「檔案／下載」點 APK；若卡在「下載中…」但已 100%，取消後改開下載資料夾的檔案
 > 3. 允許未知來源後安裝「成二牧區」
-> 4. 註冊（密碼至少 10 個字）或登入
+> 4. 註冊（密碼至少 6 個字）或登入
 
 ---
 

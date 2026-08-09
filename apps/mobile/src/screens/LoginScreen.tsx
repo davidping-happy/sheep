@@ -122,7 +122,7 @@ export default function LoginScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="密碼（至少 10 字元）"
+              placeholder="密碼（至少 6 字元）"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPw}
