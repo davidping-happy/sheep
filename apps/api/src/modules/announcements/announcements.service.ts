@@ -29,6 +29,14 @@ export class AnnouncementsService {
     });
   }
 
+  async getPublished(id: string) {
+    const ann = await this.prisma.announcement.findFirst({
+      where: { id, isPublished: true },
+    });
+    if (!ann) throw new NotFoundException();
+    return ann;
+  }
+
   /** 後台：含草稿 */
   listAll() {
     return this.prisma.announcement.findMany({

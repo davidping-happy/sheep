@@ -9,6 +9,7 @@ export type HomeStackParamList = {
   Groups: undefined;
   GroupDetail: { id: string };
   Announcements: undefined;
+  AnnouncementDetail: { id: string };
   Events: undefined;
   Prayer: undefined;
 };

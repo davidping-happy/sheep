@@ -24,6 +24,7 @@ import ArticleDetailScreen from './screens/ArticleDetailScreen';
 import GroupsScreen from './screens/GroupsScreen';
 import GroupDetailScreen from './screens/GroupDetailScreen';
 import AnnouncementsScreen from './screens/AnnouncementsScreen';
+import AnnouncementDetailScreen from './screens/AnnouncementDetailScreen';
 import EventsScreen from './screens/EventsScreen';
 import PrayerScreen from './screens/PrayerScreen';
 import { theme } from './theme';
@@ -77,6 +78,11 @@ function HomeStackNavigator() {
         name="Announcements"
         component={AnnouncementsScreen}
         options={{ title: '最新資訊' }}
+      />
+      <HomeStack.Screen
+        name="AnnouncementDetail"
+        component={AnnouncementDetailScreen}
+        options={{ title: '資訊詳情' }}
       />
       <HomeStack.Screen
         name="Prayer"

@@ -62,6 +62,12 @@ export class AnnouncementsController {
     return this.service.listAll();
   }
 
+  @Public()
+  @Get(':id')
+  getOne(@Param('id') id: string) {
+    return this.service.getPublished(id);
+  }
+
   @ApiBearerAuth()
   @Roles(Role.STAFF)
   @Post('preview-audience')

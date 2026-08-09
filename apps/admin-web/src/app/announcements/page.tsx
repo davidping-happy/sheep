@@ -250,11 +250,18 @@ export default function AnnouncementsPage() {
           required
         />
         <label style={labelStyle}>內容</label>
+        <p className="muted" style={{ marginTop: 0, marginBottom: 6 }}>
+          App 列表會顯示前幾點「重點」。建議用條列撰寫，例如：
+          <br />- 時間：週日上午 10:00
+          <br />- 地點：本堂
+          <br />- 備註：請提早到場
+        </p>
         <textarea
           style={{ ...inputStyle, minHeight: 100 }}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           required
+          placeholder={'- 重點一\n- 重點二\n\n詳細說明…'}
         />
         <ImageField
           label="公告圖片"

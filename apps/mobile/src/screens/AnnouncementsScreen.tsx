@@ -2,13 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RemoteImage } from '../components/RemoteImage';
+import { extractAnnouncementHighlights } from '../lib/announcement-highlights';
 import { api, ApiError } from '../lib/api';
+import type { HomeStackParamList } from '../navigation/types';
 import { theme } from '../theme';
 
 interface Announcement {
@@ -20,7 +25,9 @@ interface Announcement {
   audience: string;
 }
 
-export default function AnnouncementsScreen() {
+type Props = NativeStackScreenProps<HomeStackParamList, 'Announcements'>;
+
+export default function AnnouncementsScreen({ navigation }: Props) {
   const [items, setItems] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -72,18 +79,43 @@ export default function AnnouncementsScreen() {
       ListEmptyComponent={
         <Text style={styles.empty}>尚無公告。</Text>
       }
-      renderItem={({ item }) => (
-        <View style={styles.card}>
-          <RemoteImage uri={item.imageUrl} style={styles.image} />
-          <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.meta}>
-            {item.publishedAt
-              ? new Date(item.publishedAt).toLocaleString()
-              : ''}
-          </Text>
-          <Text style={styles.body}>{item.body}</Text>
-        </View>
-      )}
+      renderItem={({ item }) => {
+        const highlights = extractAnnouncementHighlights(item.body, 3);
+        return (
+          <Pressable
+            style={styles.card}
+            onPress={() =>
+              navigation.navigate('AnnouncementDetail', { id: item.id })
+            }
+          >
+            <RemoteImage uri={item.imageUrl} style={styles.image} />
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.meta}>
+              {item.publishedAt
+                ? new Date(item.publishedAt).toLocaleString()
+                : ''}
+            </Text>
+            {highlights.length > 0 ? (
+              <View style={styles.highlights}>
+                {highlights.map((h, idx) => (
+                  <View key={`${item.id}-${idx}`} style={styles.bulletRow}>
+                    <Text style={styles.bullet}>•</Text>
+                    <Text style={styles.highlightText}>{h}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            <View style={styles.moreRow}>
+              <Text style={styles.more}>查看詳情</Text>
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={theme.color.brand}
+              />
+            </View>
+          </Pressable>
+        );
+      }}
     />
   );
 }
@@ -99,7 +131,7 @@ const styles = StyleSheet.create({
   list: { padding: 16, paddingBottom: 32, flexGrow: 1 },
   image: {
     width: '100%',
-    height: 160,
+    height: 140,
     borderRadius: theme.radius.sm,
     marginBottom: 10,
   },
@@ -118,7 +150,31 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 10,
   },
-  body: { fontSize: 15, lineHeight: 24, color: theme.color.ink },
+  highlights: { gap: 6, marginBottom: 12 },
+  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  bullet: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: theme.color.brand,
+    fontWeight: '700',
+  },
+  highlightText: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22,
+    color: theme.color.ink,
+  },
+  moreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginTop: 2,
+  },
+  more: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.color.brand,
+  },
   empty: { textAlign: 'center', color: theme.color.inkMuted, marginTop: 40 },
   error: { color: theme.color.danger, marginBottom: 8 },
 });
