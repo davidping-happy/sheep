@@ -262,7 +262,7 @@ export default function EventsPage() {
   if (!auth.token) {
     return (
       <AdminLoginForm
-        title="活動報名簽到"
+        title="課程活動報名"
         hint="需 STAFF 以上登入。出席名單屬行蹤資料，僅主辦同工／管理員可查（§6.1 / §四.8）。"
         auth={auth}
       />
@@ -274,7 +274,7 @@ export default function EventsPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>活動報名簽到</h2>
+        <h2>課程活動報名</h2>
         <div style={{ display: 'flex', gap: 8 }}>
           <button style={ghostBtn} onClick={() => auth.token && loadEvents(auth.token)}>
             重新整理
