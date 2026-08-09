@@ -34,6 +34,8 @@ export enum ModerationStatus {
 export enum RegistrationStatus {
   REGISTERED = 'REGISTERED',
   WAITLISTED = 'WAITLISTED',
+  /** 會友申請取消，待管理員審核 */
+  CANCEL_PENDING = 'CANCEL_PENDING',
   CANCELLED = 'CANCELLED',
 }
 

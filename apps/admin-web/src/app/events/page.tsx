@@ -42,6 +42,7 @@ interface CheckinTokenResult {
 const STATUS_LABEL: Record<string, string> = {
   REGISTERED: '已報名',
   WAITLISTED: '候補',
+  CANCEL_PENDING: '取消審核中',
   CANCELLED: '已取消',
 };
 
@@ -233,6 +234,24 @@ export default function EventsPage() {
     await issueQr();
   }
 
+  async function decideCancel(
+    registrationId: string,
+    action: 'approve' | 'reject',
+  ) {
+    if (!auth.token || !selectedId) return;
+    setError('');
+    try {
+      const path =
+        action === 'approve'
+          ? `/events/${selectedId}/registrations/${registrationId}/approve-cancel`
+          : `/events/${selectedId}/registrations/${registrationId}/reject-cancel`;
+      await apiFetch(path, { method: 'POST', token: auth.token });
+      await openRoster(selectedId);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '處理取消申請失敗');
+    }
+  }
+
   /** 名單匯出 CSV（含簽到） */
   function exportRosterCsv() {
     if (!selected || roster.length === 0) return;
@@ -285,7 +304,8 @@ export default function EventsPage() {
         </div>
       </div>
       <p className="muted">
-        建立活動、查看報名名單、產生現場動態簽到碼。查看名單會寫入稽核紀錄。
+        建立活動、查看報名名單、審核取消申請、產生現場動態簽到碼。查看名單會寫入稽核紀錄。
+        名額額滿時 App 會提示無法報名；會友取消報名須於此核准後才生效。
       </p>
 
       {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
@@ -491,6 +511,7 @@ export default function EventsPage() {
                   <th style={thStyle}>狀態</th>
                   <th style={thStyle}>簽到</th>
                   <th style={thStyle}>監護人同意</th>
+                  <th style={thStyle}>取消審核</th>
                 </tr>
               </thead>
               <tbody>
@@ -516,6 +537,26 @@ export default function EventsPage() {
                       )}
                     </td>
                     <td style={tdStyle}>{row.guardianConsent ? '是' : '—'}</td>
+                    <td style={tdStyle}>
+                      {row.status === 'CANCEL_PENDING' ? (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <button
+                            style={primaryBtnInline}
+                            onClick={() => decideCancel(row.id, 'approve')}
+                          >
+                            核准取消
+                          </button>
+                          <button
+                            style={ghostBtn}
+                            onClick={() => decideCancel(row.id, 'reject')}
+                          >
+                            駁回
+                          </button>
+                        </div>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

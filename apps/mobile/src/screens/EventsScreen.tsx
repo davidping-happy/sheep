@@ -44,6 +44,7 @@ interface Registration {
 const STATUS: Record<string, string> = {
   REGISTERED: '已報名',
   WAITLISTED: '候補',
+  CANCEL_PENDING: '取消審核中',
   CANCELLED: '已取消',
 };
 
@@ -137,24 +138,52 @@ export default function EventsScreen() {
       );
       setRegisterEvent(null);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '報名失敗');
+      const msg = e instanceof ApiError ? e.message : '報名失敗';
+      setError(msg);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert(msg);
+      } else {
+        Alert.alert('無法完成報名', msg);
+      }
     } finally {
       setBusyId(null);
     }
   }
 
-  async function cancel(ev: EventItem) {
-    setBusyId(ev.id);
-    try {
-      const r = await api<Registration>(`/events/${ev.id}/cancel`, {
-        method: 'POST',
-      });
-      setRegs((prev) => ({ ...prev, [ev.id]: r.status }));
-      setInfo(`${ev.title}：已取消`);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : '取消失敗');
-    } finally {
-      setBusyId(null);
+  function cancel(ev: EventItem) {
+    const confirmMsg =
+      '取消報名需待管理員審核通過後才會生效，確定送出申請？';
+    const run = async () => {
+      setBusyId(ev.id);
+      setError('');
+      try {
+        const r = await api<Registration>(`/events/${ev.id}/cancel`, {
+          method: 'POST',
+        });
+        setRegs((prev) => ({ ...prev, [ev.id]: r.status }));
+        const msg =
+          r.status === 'CANCEL_PENDING'
+            ? `${ev.title}：已送出取消申請，待管理員審核`
+            : `${ev.title}：${STATUS[r.status] ?? r.status}`;
+        setInfo(msg);
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.alert(msg);
+        } else {
+          Alert.alert('取消報名', msg);
+        }
+      } catch (e) {
+        setError(e instanceof ApiError ? e.message : '取消失敗');
+      } finally {
+        setBusyId(null);
+      }
+    };
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (window.confirm(confirmMsg)) void run();
+    } else {
+      Alert.alert('取消報名', confirmMsg, [
+        { text: '再想想', style: 'cancel' },
+        { text: '送出申請', style: 'destructive', onPress: () => void run() },
+      ]);
     }
   }
 
@@ -248,6 +277,10 @@ export default function EventsScreen() {
                   >
                     <Text style={styles.primaryText}>報名</Text>
                   </Pressable>
+                ) : status === 'CANCEL_PENDING' ? (
+                  <Pressable style={styles.ghost} disabled>
+                    <Text>取消審核中</Text>
+                  </Pressable>
                 ) : (
                   <Pressable
                     style={styles.ghost}
@@ -259,7 +292,7 @@ export default function EventsScreen() {
                 )}
                 <Pressable
                   style={styles.ghost}
-                  disabled={busyId === item.id}
+                  disabled={busyId === item.id || status !== 'REGISTERED'}
                   onPress={() => checkin(item)}
                 >
                   <Text>簽到</Text>

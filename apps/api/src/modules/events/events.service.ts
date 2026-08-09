@@ -147,13 +147,33 @@ export class EventsService {
       throw new BadRequestException('此活動需監護人同意');
     }
 
-    const activeCount = await this.prisma.eventRegistration.count({
-      where: { eventId, status: RegistrationStatus.REGISTERED },
+    const existing = await this.prisma.eventRegistration.findUnique({
+      where: { eventId_userId: { eventId, userId: user.id } },
     });
-    const status =
-      event.capacity != null && activeCount >= event.capacity
-        ? RegistrationStatus.WAITLISTED
-        : RegistrationStatus.REGISTERED;
+    if (
+      existing?.status === RegistrationStatus.REGISTERED ||
+      existing?.status === RegistrationStatus.CANCEL_PENDING
+    ) {
+      throw new BadRequestException('您已報名此活動');
+    }
+
+    // 佔名額：已報名 + 取消審核中（尚未核准取消前仍佔位）
+    const activeCount = await this.prisma.eventRegistration.count({
+      where: {
+        eventId,
+        status: {
+          in: [
+            RegistrationStatus.REGISTERED,
+            RegistrationStatus.CANCEL_PENDING,
+          ],
+        },
+      },
+    });
+    if (event.capacity != null && activeCount >= event.capacity) {
+      throw new BadRequestException(
+        `名額已滿，無法完成報名（上限 ${event.capacity} 人，目前已報名 ${activeCount} 人）`,
+      );
+    }
 
     const form = {
       registrantName: name,
@@ -168,18 +188,92 @@ export class EventsService {
       create: {
         eventId,
         userId: user.id,
-        status,
+        status: RegistrationStatus.REGISTERED,
         ...form,
       },
-      update: { status, ...form },
+      update: { status: RegistrationStatus.REGISTERED, ...form },
     });
   }
 
+  /** 會友申請取消報名：進入審核，須管理員核准後才真正取消 */
   async cancel(user: AuthUser, eventId: string) {
-    return this.prisma.eventRegistration.update({
+    const reg = await this.prisma.eventRegistration.findUnique({
       where: { eventId_userId: { eventId, userId: user.id } },
+    });
+    if (!reg) throw new NotFoundException('尚未報名此活動');
+    if (reg.status === RegistrationStatus.CANCEL_PENDING) {
+      throw new BadRequestException('取消申請審核中，請等候管理員處理');
+    }
+    if (reg.status === RegistrationStatus.CANCELLED) {
+      throw new BadRequestException('報名已取消');
+    }
+    if (
+      reg.status !== RegistrationStatus.REGISTERED &&
+      reg.status !== RegistrationStatus.WAITLISTED
+    ) {
+      throw new BadRequestException('目前狀態無法申請取消');
+    }
+
+    // 候補未佔名額：可直接取消
+    if (reg.status === RegistrationStatus.WAITLISTED) {
+      return this.prisma.eventRegistration.update({
+        where: { id: reg.id },
+        data: { status: RegistrationStatus.CANCELLED },
+      });
+    }
+
+    return this.prisma.eventRegistration.update({
+      where: { id: reg.id },
+      data: { status: RegistrationStatus.CANCEL_PENDING },
+    });
+  }
+
+  /** 管理員核准取消報名 */
+  async approveCancel(user: AuthUser, eventId: string, registrationId: string) {
+    await this.assertOrganizer(user, eventId);
+    const reg = await this.prisma.eventRegistration.findFirst({
+      where: { id: registrationId, eventId },
+    });
+    if (!reg) throw new NotFoundException();
+    if (reg.status !== RegistrationStatus.CANCEL_PENDING) {
+      throw new BadRequestException('此報名並非取消審核中');
+    }
+    const updated = await this.prisma.eventRegistration.update({
+      where: { id: reg.id },
       data: { status: RegistrationStatus.CANCELLED },
     });
+    await this.audit.log({
+      actorId: user.id,
+      action: 'EVENT_CANCEL_APPROVE',
+      targetType: 'EventRegistration',
+      targetId: reg.id,
+      metadata: { eventId },
+    });
+    return updated;
+  }
+
+  /** 管理員駁回取消申請：恢復為已報名 */
+  async rejectCancel(user: AuthUser, eventId: string, registrationId: string) {
+    await this.assertOrganizer(user, eventId);
+    const reg = await this.prisma.eventRegistration.findFirst({
+      where: { id: registrationId, eventId },
+    });
+    if (!reg) throw new NotFoundException();
+    if (reg.status !== RegistrationStatus.CANCEL_PENDING) {
+      throw new BadRequestException('此報名並非取消審核中');
+    }
+    const updated = await this.prisma.eventRegistration.update({
+      where: { id: reg.id },
+      data: { status: RegistrationStatus.REGISTERED },
+    });
+    await this.audit.log({
+      actorId: user.id,
+      action: 'EVENT_CANCEL_REJECT',
+      targetType: 'EventRegistration',
+      targetId: reg.id,
+      metadata: { eventId },
+    });
+    return updated;
   }
 
   /** 產生動態簽到 Token；使舊 token 立即失效，避免截圖重用 */

@@ -72,6 +72,26 @@ export class EventsController {
   }
 
   @Roles(Role.STAFF)
+  @Post(':id/registrations/:regId/approve-cancel')
+  approveCancel(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('regId') regId: string,
+  ) {
+    return this.service.approveCancel(user, id, regId);
+  }
+
+  @Roles(Role.STAFF)
+  @Post(':id/registrations/:regId/reject-cancel')
+  rejectCancel(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('regId') regId: string,
+  ) {
+    return this.service.rejectCancel(user, id, regId);
+  }
+
+  @Roles(Role.STAFF)
   @Post(':id/checkin-token')
   issueToken(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.service.issueCheckinToken(user, id);
