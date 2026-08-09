@@ -15,13 +15,13 @@ https://churchsheep-api.onrender.com/downloads/churchsheep-latest.apk
 
 ### 備用
 
-- GitHub：https://github.com/davidping-happy/sheep/releases/download/v1.1.4-preview/churchsheep-1.1.4.apk
-- Expo：https://expo.dev/artifacts/eas/R3oe7VDGOlcRbpCPgAitt-CClmVKpDMO8toONCghiUE.apk
+- GitHub：https://github.com/davidping-happy/sheep/releases/download/v1.1.5-preview/churchsheep-1.1.5.apk
+- Expo：https://expo.dev/artifacts/eas/ZLn45qzvTrD11p5MDZ2mm7cFiZmR8F-NMylHE3MWFHc.apk
 
 ## 短訊範本
 
 ```
-【成二牧區 App 1.1.4】
+【成二牧區 App 1.1.5】
 請用 Chrome 打開（勿用 LINE）：
 https://churchsheep-api.onrender.com/downloads/churchsheep-latest.apk
 下載後覆蓋安裝。

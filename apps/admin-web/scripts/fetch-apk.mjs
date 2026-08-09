@@ -14,8 +14,8 @@ const outDir = path.join(adminRoot, 'public', 'downloads');
 
 const APK_URL =
   process.env.APK_MIRROR_URL ||
-  'https://expo.dev/artifacts/eas/R3oe7VDGOlcRbpCPgAitt-CClmVKpDMO8toONCghiUE.apk';
-const FILE_NAME = process.env.APK_FILE_NAME || 'churchsheep-1.1.4.apk';
+  'https://expo.dev/artifacts/eas/ZLn45qzvTrD11p5MDZ2mm7cFiZmR8F-NMylHE3MWFHc.apk';
+const FILE_NAME = process.env.APK_FILE_NAME || 'churchsheep-1.1.5.apk';
 const LATEST_NAME = 'churchsheep-latest.apk';
 
 async function main() {
