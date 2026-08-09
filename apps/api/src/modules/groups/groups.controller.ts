@@ -25,10 +25,27 @@ import { Public } from '../../auth/decorators/public.decorator';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { GroupsService } from './groups.service';
 
-class CreateGroupDto {
+class CreateZoneDto {
   @IsUUID() pastoralAreaId!: string;
+  @IsString() code!: string;
+  @IsOptional() @IsString() leaderName?: string;
+  @IsOptional() @IsString() intro?: string;
+  @IsOptional() @IsString() photoUrl?: string;
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(7)
+  @IsString({ each: true })
+  imageUrls?: string[];
+}
+
+class UpdateZoneDto extends PartialType(CreateZoneDto) {}
+
+class CreateGroupDto {
+  @IsUUID() zoneId!: string;
+  @IsOptional() @IsUUID() pastoralAreaId?: string;
   @IsString() name!: string;
   @IsOptional() @IsString() intro?: string;
+  @IsOptional() @IsString() leaderName?: string;
   @IsOptional() @IsString() photoUrl?: string;
   @IsOptional()
   @IsArray()
@@ -84,6 +101,33 @@ export class GroupsController {
   }
 
   @Public()
+  @Get('zones/:id')
+  zone(@Param('id') id: string) {
+    return this.service.getZone(id);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Post('zones')
+  createZone(@Body() dto: CreateZoneDto) {
+    return this.service.createZone(dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Patch('zones/:id')
+  updateZone(@Param('id') id: string, @Body() dto: UpdateZoneDto) {
+    return this.service.updateZone(id, dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.STAFF)
+  @Delete('zones/:id')
+  removeZone(@Param('id') id: string) {
+    return this.service.removeZone(id);
+  }
+
+  @Public()
   @Get(':id')
   group(@Param('id') id: string) {
     return this.service.getGroup(id);
@@ -110,10 +154,7 @@ export class GroupsController {
   @ApiBearerAuth()
   @Roles(Role.STAFF)
   @Delete(':id')
-  remove(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.service.removeGroup(user, id);
   }
 }

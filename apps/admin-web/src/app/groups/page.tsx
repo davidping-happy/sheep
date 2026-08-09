@@ -10,6 +10,7 @@ import { AdminLoginForm, useAdminAuth } from '../../lib/useAdminAuth';
 interface GroupBrief {
   id: string;
   name: string;
+  leaderName?: string | null;
   meetingTime?: string | null;
   meetingPlace?: string | null;
   intro?: string | null;
@@ -17,12 +18,23 @@ interface GroupBrief {
   imageUrls?: string[];
 }
 
+interface ZoneBrief {
+  id: string;
+  code: string;
+  leaderName: string;
+  intro?: string | null;
+  photoUrl?: string | null;
+  imageUrls?: string[];
+  groups: GroupBrief[];
+}
+
 interface Area {
   id: string;
   name: string;
   description: string | null;
   photoUrl?: string | null;
-  groups: GroupBrief[];
+  zones: ZoneBrief[];
+  groups?: GroupBrief[];
 }
 
 export default function GroupsPage() {
@@ -30,24 +42,40 @@ export default function GroupsPage() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [error, setError] = useState('');
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
+  const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+
   const [areaName, setAreaName] = useState('');
   const [areaDesc, setAreaDesc] = useState('');
   const [areaPhotoUrl, setAreaPhotoUrl] = useState('');
+
+  const [zoneAreaId, setZoneAreaId] = useState('');
+  const [zoneCode, setZoneCode] = useState('');
+  const [zoneLeaderName, setZoneLeaderName] = useState('');
+  const [zoneIntro, setZoneIntro] = useState('');
+  const [zoneImageUrls, setZoneImageUrls] = useState<string[]>([]);
+
+  const [groupZoneId, setGroupZoneId] = useState('');
   const [groupName, setGroupName] = useState('');
-  const [groupAreaId, setGroupAreaId] = useState('');
-  const [meetingTime, setMeetingTime] = useState('');
-  const [meetingPlace, setMeetingPlace] = useState('');
+  const [groupLeaderName, setGroupLeaderName] = useState('');
   const [intro, setIntro] = useState('');
   const [groupImageUrls, setGroupImageUrls] = useState<string[]>([]);
+  const [meetingTime, setMeetingTime] = useState('');
+  const [meetingPlace, setMeetingPlace] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const allZones = areas.flatMap((a) =>
+    (a.zones ?? []).map((z) => ({ ...z, areaName: a.name, areaId: a.id })),
+  );
 
   const load = useCallback(async () => {
     setError('');
     try {
       const data = await apiFetch<Area[]>('/groups/areas');
       setAreas(data);
-      setGroupAreaId((prev) => prev || data[0]?.id || '');
+      setZoneAreaId((prev) => prev || data[0]?.id || '');
+      const firstZone = data[0]?.zones?.[0]?.id || '';
+      setGroupZoneId((prev) => prev || firstZone);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '載入失敗');
     }
@@ -64,9 +92,18 @@ export default function GroupsPage() {
     setAreaPhotoUrl('');
   }
 
+  function resetZoneForm() {
+    setEditingZoneId(null);
+    setZoneCode('');
+    setZoneLeaderName('');
+    setZoneIntro('');
+    setZoneImageUrls([]);
+  }
+
   function resetGroupForm() {
     setEditingGroupId(null);
     setGroupName('');
+    setGroupLeaderName('');
     setIntro('');
     setGroupImageUrls([]);
     setMeetingTime('');
@@ -81,10 +118,27 @@ export default function GroupsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function startEditGroup(group: GroupBrief, areaId: string) {
+  function startEditZone(zone: ZoneBrief, areaId: string) {
+    setEditingZoneId(zone.id);
+    setZoneAreaId(areaId);
+    setZoneCode(zone.code);
+    setZoneLeaderName(zone.leaderName ?? '');
+    setZoneIntro(zone.intro ?? '');
+    setZoneImageUrls(
+      zone.imageUrls?.length
+        ? zone.imageUrls
+        : zone.photoUrl
+          ? [zone.photoUrl]
+          : [],
+    );
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function startEditGroup(group: GroupBrief, zoneId: string) {
     setEditingGroupId(group.id);
-    setGroupAreaId(areaId);
+    setGroupZoneId(zoneId);
     setGroupName(group.name);
+    setGroupLeaderName(group.leaderName ?? '');
     setIntro(group.intro ?? '');
     setGroupImageUrls(
       group.imageUrls?.length
@@ -131,15 +185,52 @@ export default function GroupsPage() {
     }
   }
 
-  async function saveGroup(e: React.FormEvent) {
+  async function saveZone(e: React.FormEvent) {
     e.preventDefault();
-    if (!auth.token || !groupAreaId) return;
+    if (!auth.token || !zoneAreaId) return;
     setSaving(true);
     setError('');
     try {
       const body = {
-        pastoralAreaId: groupAreaId,
+        pastoralAreaId: zoneAreaId,
+        code: zoneCode,
+        leaderName: zoneLeaderName || undefined,
+        intro: zoneIntro || undefined,
+        imageUrls: zoneImageUrls,
+        photoUrl: zoneImageUrls[0] || undefined,
+      };
+      if (editingZoneId) {
+        await apiFetch(`/groups/zones/${editingZoneId}`, {
+          method: 'PATCH',
+          token: auth.token,
+          body: JSON.stringify(body),
+        });
+      } else {
+        await apiFetch('/groups/zones', {
+          method: 'POST',
+          token: auth.token,
+          body: JSON.stringify(body),
+        });
+      }
+      resetZoneForm();
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '儲存小區失敗');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveGroup(e: React.FormEvent) {
+    e.preventDefault();
+    if (!auth.token || !groupZoneId) return;
+    setSaving(true);
+    setError('');
+    try {
+      const body = {
+        zoneId: groupZoneId,
         name: groupName,
+        leaderName: groupLeaderName || undefined,
         intro: intro || undefined,
         imageUrls: groupImageUrls,
         photoUrl: groupImageUrls[0] || undefined,
@@ -172,7 +263,7 @@ export default function GroupsPage() {
     if (!auth.token) return;
     if (
       !window.confirm(
-        `確定刪除牧區「${area.name}」？需先無小組。此動作無法復原。`,
+        `確定刪除牧區「${area.name}」？需先無小區。此動作無法復原。`,
       )
     ) {
       return;
@@ -186,6 +277,27 @@ export default function GroupsPage() {
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '刪除牧區失敗');
+    }
+  }
+
+  async function removeZone(zone: ZoneBrief) {
+    if (!auth.token) return;
+    if (
+      !window.confirm(
+        `確定刪除小區「${zone.code}」？需先無小組。此動作無法復原。`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await apiFetch(`/groups/zones/${zone.id}`, {
+        method: 'DELETE',
+        token: auth.token,
+      });
+      if (editingZoneId === zone.id) resetZoneForm();
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '刪除小區失敗');
     }
   }
 
@@ -210,7 +322,7 @@ export default function GroupsPage() {
     return (
       <AdminLoginForm
         title="牧區・小組"
-        hint="維護牧區與小組介紹（目錄式資料）。可新增、編輯、刪除。"
+        hint="維護牧區 → 小區 → 小組（分層目錄）。可新增、編輯、刪除。"
         auth={auth}
       />
     );
@@ -224,9 +336,10 @@ export default function GroupsPage() {
           登出
         </button>
       </div>
+      <p className="muted">分層：牧區 → 小區（編號／區長／介紹／圖）→ 小組（名稱／組長／介紹／圖）。圖片以完整呈現為主。</p>
       {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
 
-      <div className="grid">
+      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
         <form className="card" onSubmit={saveArea}>
           <h3>{editingAreaId ? '編輯牧區' : '新增牧區'}</h3>
           {editingAreaId ? (
@@ -260,6 +373,60 @@ export default function GroupsPage() {
           </button>
         </form>
 
+        <form className="card" onSubmit={saveZone}>
+          <h3>{editingZoneId ? '編輯小區' : '新增小區'}</h3>
+          {editingZoneId ? (
+            <p className="muted">
+              <button type="button" style={ghostBtn} onClick={resetZoneForm}>
+                取消編輯
+              </button>
+            </p>
+          ) : null}
+          <label style={labelStyle}>所屬牧區</label>
+          <select
+            style={inputStyle}
+            value={zoneAreaId}
+            onChange={(e) => setZoneAreaId(e.target.value)}
+            required
+          >
+            {areas.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+          <label style={labelStyle}>小區編號 *</label>
+          <input
+            style={inputStyle}
+            value={zoneCode}
+            onChange={(e) => setZoneCode(e.target.value)}
+            required
+            placeholder="例如：A1、01"
+          />
+          <label style={labelStyle}>區長姓名</label>
+          <input
+            style={inputStyle}
+            value={zoneLeaderName}
+            onChange={(e) => setZoneLeaderName(e.target.value)}
+          />
+          <label style={labelStyle}>小區介紹</label>
+          <textarea
+            style={{ ...inputStyle, minHeight: 72 }}
+            value={zoneIntro}
+            onChange={(e) => setZoneIntro(e.target.value)}
+          />
+          <ImageGalleryField
+            label="小區圖片"
+            token={auth.token}
+            value={zoneImageUrls}
+            onChange={setZoneImageUrls}
+            max={7}
+          />
+          <button style={primaryBtn} disabled={saving || !zoneAreaId}>
+            {saving ? '儲存中…' : editingZoneId ? '更新小區' : '建立小區'}
+          </button>
+        </form>
+
         <form className="card" onSubmit={saveGroup}>
           <h3>{editingGroupId ? '編輯小組' : '新增小組'}</h3>
           {editingGroupId ? (
@@ -269,29 +436,39 @@ export default function GroupsPage() {
               </button>
             </p>
           ) : null}
-          <label style={labelStyle}>所屬牧區</label>
+          <label style={labelStyle}>所屬小區</label>
           <select
             style={inputStyle}
-            value={groupAreaId}
-            onChange={(e) => setGroupAreaId(e.target.value)}
+            value={groupZoneId}
+            onChange={(e) => setGroupZoneId(e.target.value)}
             required
           >
-            {areas.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
+            {allZones.length === 0 ? (
+              <option value="">請先建立小區</option>
+            ) : (
+              allZones.map((z) => (
+                <option key={z.id} value={z.id}>
+                  {z.areaName} · 小區 {z.code}
+                </option>
+              ))
+            )}
           </select>
-          <label style={labelStyle}>小組名稱</label>
+          <label style={labelStyle}>小組名稱 *</label>
           <input
             style={inputStyle}
             value={groupName}
             onChange={(e) => setGroupName(e.target.value)}
             required
           />
-          <label style={labelStyle}>簡介</label>
+          <label style={labelStyle}>小組長姓名</label>
           <input
             style={inputStyle}
+            value={groupLeaderName}
+            onChange={(e) => setGroupLeaderName(e.target.value)}
+          />
+          <label style={labelStyle}>小組介紹</label>
+          <textarea
+            style={{ ...inputStyle, minHeight: 72 }}
             value={intro}
             onChange={(e) => setIntro(e.target.value)}
           />
@@ -302,20 +479,20 @@ export default function GroupsPage() {
             onChange={setGroupImageUrls}
             max={7}
           />
-          <label style={labelStyle}>聚會時間</label>
+          <label style={labelStyle}>聚會時間（選填）</label>
           <input
             style={inputStyle}
             value={meetingTime}
             onChange={(e) => setMeetingTime(e.target.value)}
             placeholder="週三 19:30"
           />
-          <label style={labelStyle}>聚會地點</label>
+          <label style={labelStyle}>聚會地點（選填）</label>
           <input
             style={inputStyle}
             value={meetingPlace}
             onChange={(e) => setMeetingPlace(e.target.value)}
           />
-          <button style={primaryBtn} disabled={saving}>
+          <button style={primaryBtn} disabled={saving || !groupZoneId}>
             {saving ? '儲存中…' : editingGroupId ? '更新小組' : '建立小組'}
           </button>
         </form>
@@ -327,7 +504,7 @@ export default function GroupsPage() {
             <h3 style={{ margin: 0 }}>{area.name}</h3>
             <div style={{ display: 'flex', gap: 6 }}>
               <button style={ghostBtn} onClick={() => startEditArea(area)}>
-                編輯
+                編輯牧區
               </button>
               <button style={dangerBtn} onClick={() => removeArea(area)}>
                 刪除
@@ -342,62 +519,109 @@ export default function GroupsPage() {
               alt=""
               style={{
                 width: '100%',
-                maxHeight: 160,
-                objectFit: 'cover',
+                maxHeight: 200,
+                objectFit: 'contain',
+                background: '#f3f4f6',
                 borderRadius: 8,
                 marginBottom: 10,
               }}
             />
           ) : null}
-          <ul style={{ paddingLeft: 18 }}>
-            {area.groups.map((g) => (
-              <li key={g.id} style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  {resolveMediaUrl(g.photoUrl) ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={resolveMediaUrl(g.photoUrl)!}
-                      alt=""
-                      style={{
-                        width: 56,
-                        height: 56,
-                        objectFit: 'cover',
-                        borderRadius: 8,
-                        flexShrink: 0,
-                      }}
-                    />
-                  ) : null}
-                  <div style={{ flex: 1 }}>
-                    <strong>{g.name}</strong>
-                    {g.meetingTime ? ` · ${g.meetingTime}` : ''}
-                    {g.meetingPlace ? ` @ ${g.meetingPlace}` : ''}
-                    {(g.imageUrls?.length ?? (g.photoUrl ? 1 : 0)) > 0 ? (
-                      <div className="muted">
-                        圖片 {g.imageUrls?.length ?? 1} 張
-                      </div>
-                    ) : null}
-                    {g.intro ? (
-                      <div className="muted">{g.intro}</div>
-                    ) : null}
-                    <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                      <button
-                        style={ghostBtn}
-                        onClick={() => startEditGroup(g, area.id)}
-                      >
-                        編輯
-                      </button>
-                      <button
-                        style={dangerBtn}
-                        onClick={() => removeGroup(g)}
-                      >
-                        刪除
-                      </button>
-                    </div>
+
+          {(area.zones ?? []).length === 0 ? (
+            <p className="muted">尚無小區，請先新增小區。</p>
+          ) : (
+            (area.zones ?? []).map((zone) => (
+              <div
+                key={zone.id}
+                style={{
+                  borderTop: '1px solid #e5e7eb',
+                  marginTop: 12,
+                  paddingTop: 12,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                  <div>
+                    <strong>小區 {zone.code}</strong>
+                    <span className="muted"> · 區長 {zone.leaderName || '—'}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      style={ghostBtn}
+                      onClick={() => startEditZone(zone, area.id)}
+                    >
+                      編輯小區
+                    </button>
+                    <button style={dangerBtn} onClick={() => removeZone(zone)}>
+                      刪除
+                    </button>
                   </div>
                 </div>
-              </li>
-            ))}
-          </ul>
+                {zone.intro ? <p className="muted">{zone.intro}</p> : null}
+                {resolveMediaUrl(zone.photoUrl) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={resolveMediaUrl(zone.photoUrl)!}
+                    alt=""
+                    style={{
+                      width: '100%',
+                      maxHeight: 180,
+                      objectFit: 'contain',
+                      background: '#f3f4f6',
+                      borderRadius: 8,
+                      margin: '8px 0',
+                    }}
+                  />
+                ) : null}
+                <ul style={{ paddingLeft: 18 }}>
+                  {zone.groups.map((g) => (
+                    <li key={g.id} style={{ marginBottom: 12 }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        {resolveMediaUrl(g.photoUrl) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={resolveMediaUrl(g.photoUrl)!}
+                            alt=""
+                            style={{
+                              width: 72,
+                              height: 72,
+                              objectFit: 'contain',
+                              background: '#f3f4f6',
+                              borderRadius: 8,
+                              flexShrink: 0,
+                            }}
+                          />
+                        ) : null}
+                        <div style={{ flex: 1 }}>
+                          <strong>{g.name}</strong>
+                          <div className="muted">
+                            小組長：{g.leaderName || '—'}
+                          </div>
+                          {g.intro ? (
+                            <div className="muted">{g.intro}</div>
+                          ) : null}
+                          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                            <button
+                              style={ghostBtn}
+                              onClick={() => startEditGroup(g, zone.id)}
+                            >
+                              編輯小組
+                            </button>
+                            <button
+                              style={dangerBtn}
+                              onClick={() => removeGroup(g)}
+                            >
+                              刪除
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          )}
         </div>
       ))}
     </div>

@@ -9,10 +9,21 @@ import { normalizeImageUrls } from '../../common/media-urls';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthUser } from '../../auth/decorators/current-user.decorator';
 
-interface GroupInput {
+interface ZoneInput {
   pastoralAreaId: string;
+  code: string;
+  leaderName?: string;
+  intro?: string;
+  photoUrl?: string;
+  imageUrls?: string[];
+}
+
+interface GroupInput {
+  zoneId: string;
+  pastoralAreaId?: string;
   name: string;
   intro?: string;
+  leaderName?: string;
   photoUrl?: string;
   imageUrls?: string[];
   meetingTime?: string;
@@ -21,14 +32,14 @@ interface GroupInput {
   leaderId?: string;
 }
 
-const MAX_GROUP_IMAGES = 7;
+const MAX_IMAGES = 7;
 
-function withGroupImages<
+function withImages<
   T extends { photoUrl?: string | null; imageUrls?: string[] },
 >(row: T) {
   const imageUrls = normalizeImageUrls(
     row.imageUrls,
-    MAX_GROUP_IMAGES,
+    MAX_IMAGES,
     row.photoUrl,
   );
   return {
@@ -39,10 +50,7 @@ function withGroupImages<
 }
 
 /**
- * 4. 牧區領袖・小組介紹 (§二.4)。
- *  - 目錄式資料
- *  - 聯絡資訊 contactVisible 預設 false，需當事人同意才揭露 (§四.8)
- *  - 小組長只能編輯自己帶的小組 (§四.9 最小權限)
+ * 4. 牧區・小區・小組（目錄式分層）。
  */
 @Injectable()
 export class GroupsService {
@@ -55,25 +63,43 @@ export class GroupsService {
         name: true,
         description: true,
         photoUrl: true,
-        groups: {
+        zones: {
           select: {
             id: true,
-            name: true,
+            code: true,
+            leaderName: true,
+            intro: true,
             photoUrl: true,
             imageUrls: true,
-            meetingTime: true,
-            meetingPlace: true,
-            intro: true,
+            groups: {
+              select: {
+                id: true,
+                name: true,
+                leaderName: true,
+                photoUrl: true,
+                imageUrls: true,
+                meetingTime: true,
+                meetingPlace: true,
+                intro: true,
+              },
+              orderBy: { name: 'asc' },
+            },
           },
-          orderBy: { name: 'asc' },
+          orderBy: [{ code: 'asc' }, { createdAt: 'asc' }],
         },
       },
       orderBy: { name: 'asc' },
     });
-    return areas.map((area) => ({
-      ...area,
-      groups: area.groups.map(withGroupImages),
-    }));
+
+    return areas.map((area) => {
+      const zones = area.zones.map((z) => ({
+        ...withImages(z),
+        groups: z.groups.map(withImages),
+      }));
+      // 扁平 groups：相容公告等舊客戶端
+      const groups = zones.flatMap((z) => z.groups);
+      return { ...area, zones, groups };
+    });
   }
 
   createArea(name: string, description?: string, photoUrl?: string) {
@@ -99,13 +125,101 @@ export class GroupsService {
   }
 
   async removeArea(id: string) {
-    const count = await this.prisma.smallGroup.count({
+    const zoneCount = await this.prisma.pastoralZone.count({
       where: { pastoralAreaId: id },
     });
-    if (count > 0) {
-      throw new BadRequestException('請先刪除該牧區下的小組，再刪牧區');
+    if (zoneCount > 0) {
+      throw new BadRequestException('請先刪除該牧區下的小區，再刪牧區');
     }
     await this.prisma.pastoralArea.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  async getZone(id: string) {
+    const zone = await this.prisma.pastoralZone.findUnique({
+      where: { id },
+      include: {
+        pastoralArea: { select: { id: true, name: true } },
+        groups: {
+          select: {
+            id: true,
+            name: true,
+            leaderName: true,
+            intro: true,
+            photoUrl: true,
+            imageUrls: true,
+            meetingTime: true,
+            meetingPlace: true,
+          },
+          orderBy: { name: 'asc' },
+        },
+      },
+    });
+    if (!zone) throw new NotFoundException();
+    return {
+      ...withImages(zone),
+      groups: zone.groups.map(withImages),
+    };
+  }
+
+  async createZone(dto: ZoneInput) {
+    const area = await this.prisma.pastoralArea.findUnique({
+      where: { id: dto.pastoralAreaId },
+    });
+    if (!area) throw new BadRequestException('牧區不存在');
+    const code = dto.code?.trim();
+    if (!code) throw new BadRequestException('請填寫小區編號');
+    const imageUrls = normalizeImageUrls(
+      dto.imageUrls,
+      MAX_IMAGES,
+      dto.photoUrl,
+    );
+    return this.prisma.pastoralZone.create({
+      data: {
+        pastoralAreaId: dto.pastoralAreaId,
+        code,
+        leaderName: dto.leaderName?.trim() ?? '',
+        intro: dto.intro,
+        imageUrls,
+        photoUrl: imageUrls[0] ?? null,
+      },
+    });
+  }
+
+  async updateZone(id: string, dto: Partial<ZoneInput>) {
+    const existing = await this.prisma.pastoralZone.findUnique({
+      where: { id },
+    });
+    if (!existing) throw new NotFoundException();
+    const data: Record<string, unknown> = {};
+    if (dto.pastoralAreaId !== undefined) {
+      data.pastoralAreaId = dto.pastoralAreaId;
+    }
+    if (dto.code !== undefined) {
+      const code = dto.code.trim();
+      if (!code) throw new BadRequestException('請填寫小區編號');
+      data.code = code;
+    }
+    if (dto.leaderName !== undefined) data.leaderName = dto.leaderName.trim();
+    if (dto.intro !== undefined) data.intro = dto.intro;
+    if (dto.imageUrls !== undefined || dto.photoUrl !== undefined) {
+      const imageUrls = normalizeImageUrls(
+        dto.imageUrls,
+        MAX_IMAGES,
+        dto.photoUrl,
+      );
+      data.imageUrls = imageUrls;
+      data.photoUrl = imageUrls[0] ?? null;
+    }
+    return this.prisma.pastoralZone.update({ where: { id }, data });
+  }
+
+  async removeZone(id: string) {
+    const count = await this.prisma.smallGroup.count({ where: { zoneId: id } });
+    if (count > 0) {
+      throw new BadRequestException('請先刪除該小區下的小組，再刪小區');
+    }
+    await this.prisma.pastoralZone.delete({ where: { id } });
     return { ok: true };
   }
 
@@ -115,22 +229,36 @@ export class GroupsService {
       include: {
         leader: { select: { id: true, displayName: true } },
         pastoralArea: { select: { id: true, name: true } },
+        zone: {
+          select: { id: true, code: true, leaderName: true },
+        },
       },
     });
     if (!group) throw new NotFoundException();
-    return withGroupImages(group);
+    return withImages(group);
   }
 
-  createGroup(dto: GroupInput) {
+  async createGroup(dto: GroupInput) {
+    const zone = await this.prisma.pastoralZone.findUnique({
+      where: { id: dto.zoneId },
+    });
+    if (!zone) throw new BadRequestException('小區不存在');
     const imageUrls = normalizeImageUrls(
       dto.imageUrls,
-      MAX_GROUP_IMAGES,
+      MAX_IMAGES,
       dto.photoUrl,
     );
-    const { imageUrls: _i, photoUrl: _p, ...rest } = dto;
     return this.prisma.smallGroup.create({
       data: {
-        ...rest,
+        zoneId: dto.zoneId,
+        pastoralAreaId: zone.pastoralAreaId,
+        name: dto.name,
+        intro: dto.intro,
+        leaderName: dto.leaderName?.trim() || null,
+        meetingTime: dto.meetingTime,
+        meetingPlace: dto.meetingPlace,
+        contactVisible: dto.contactVisible,
+        leaderId: dto.leaderId,
         imageUrls,
         photoUrl: imageUrls[0] ?? null,
       },
@@ -139,11 +267,30 @@ export class GroupsService {
 
   async updateGroup(user: AuthUser, id: string, dto: Partial<GroupInput>) {
     await this.assertCanEdit(user, id);
-    const data: Record<string, unknown> = { ...dto };
+    const data: Record<string, unknown> = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.intro !== undefined) data.intro = dto.intro;
+    if (dto.leaderName !== undefined) {
+      data.leaderName = dto.leaderName.trim() || null;
+    }
+    if (dto.meetingTime !== undefined) data.meetingTime = dto.meetingTime;
+    if (dto.meetingPlace !== undefined) data.meetingPlace = dto.meetingPlace;
+    if (dto.contactVisible !== undefined) {
+      data.contactVisible = dto.contactVisible;
+    }
+    if (dto.leaderId !== undefined) data.leaderId = dto.leaderId;
+    if (dto.zoneId !== undefined) {
+      const zone = await this.prisma.pastoralZone.findUnique({
+        where: { id: dto.zoneId },
+      });
+      if (!zone) throw new BadRequestException('小區不存在');
+      data.zoneId = zone.id;
+      data.pastoralAreaId = zone.pastoralAreaId;
+    }
     if (dto.imageUrls !== undefined || dto.photoUrl !== undefined) {
       const imageUrls = normalizeImageUrls(
         dto.imageUrls,
-        MAX_GROUP_IMAGES,
+        MAX_IMAGES,
         dto.photoUrl,
       );
       data.imageUrls = imageUrls;

@@ -7,6 +7,7 @@ export type HomeStackParamList = {
   Articles: undefined;
   ArticleDetail: { slug: string };
   Groups: undefined;
+  ZoneDetail: { id: string };
   GroupDetail: { id: string };
   Announcements: undefined;
   AnnouncementDetail: { id: string };

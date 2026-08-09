@@ -1,15 +1,24 @@
-import { ScrollView, StyleSheet } from 'react-native';
-import { RemoteImage } from './RemoteImage';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { FitRemoteImage } from './FitRemoteImage';
 import { theme } from '../theme';
 
 type Props = {
   urls?: string[] | null;
   coverUrl?: string | null;
+  /** @deprecated 保留相容；完整呈現時以原圖比例為準 */
   height?: number;
+  maxHeight?: number;
 };
 
-/** 橫向多圖（無圖時不顯示） */
-export function ImageGallery({ urls, coverUrl, height = 200 }: Props) {
+/** 橫向多圖；單圖／多圖皆 contain，不裁切 */
+export function ImageGallery({
+  urls,
+  coverUrl,
+  height,
+  maxHeight,
+}: Props) {
+  const mh = maxHeight ?? height ?? 360;
+  const { width: winW } = useWindowDimensions();
   const list =
     urls && urls.length > 0
       ? urls.filter(Boolean)
@@ -18,8 +27,15 @@ export function ImageGallery({ urls, coverUrl, height = 200 }: Props) {
         : [];
   if (list.length === 0) return null;
   if (list.length === 1) {
-    return <RemoteImage uri={list[0]} style={[styles.single, { height }]} />;
+    return (
+      <FitRemoteImage
+        uri={list[0]}
+        maxHeight={mh}
+        style={styles.single}
+      />
+    );
   }
+  const slideW = Math.min(winW - 48, 280);
   return (
     <ScrollView
       horizontal
@@ -27,11 +43,9 @@ export function ImageGallery({ urls, coverUrl, height = 200 }: Props) {
       contentContainerStyle={styles.row}
     >
       {list.map((u) => (
-        <RemoteImage
-          key={u}
-          uri={u}
-          style={[styles.slide, { height, width: height * 1.4 }]}
-        />
+        <View key={u} style={{ width: slideW }}>
+          <FitRemoteImage uri={u} maxHeight={mh} />
+        </View>
       ))}
     </ScrollView>
   );
@@ -39,12 +53,7 @@ export function ImageGallery({ urls, coverUrl, height = 200 }: Props) {
 
 const styles = StyleSheet.create({
   single: {
-    width: '100%',
-    borderRadius: theme.radius.md,
     marginBottom: 12,
   },
   row: { gap: 10, paddingBottom: 4, marginBottom: 8 },
-  slide: {
-    borderRadius: theme.radius.md,
-  },
 });

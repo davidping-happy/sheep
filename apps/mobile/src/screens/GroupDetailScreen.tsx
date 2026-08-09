@@ -16,6 +16,7 @@ interface GroupDetail {
   id: string;
   name: string;
   intro: string | null;
+  leaderName?: string | null;
   photoUrl?: string | null;
   imageUrls?: string[];
   meetingTime: string | null;
@@ -23,6 +24,7 @@ interface GroupDetail {
   contactVisible: boolean;
   leader: { id: string; displayName: string } | null;
   pastoralArea: { id: string; name: string };
+  zone: { id: string; code: string; leaderName: string };
 }
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'GroupDetail'>;
@@ -63,30 +65,39 @@ export default function GroupDetailScreen({ route }: Props) {
     );
   }
 
+  const leaderLabel =
+    group.leaderName?.trim() ||
+    group.leader?.displayName ||
+    '即將更新';
+
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container}>
       <ImageGallery
         urls={group.imageUrls}
         coverUrl={group.photoUrl}
-        height={220}
+        maxHeight={360}
       />
-      <Text style={styles.area}>{group.pastoralArea.name}</Text>
+      <Text style={styles.crumb}>
+        {group.pastoralArea.name} · 小區 {group.zone.code}
+      </Text>
       <Text style={styles.title}>{group.name}</Text>
-      {group.intro ? <Text style={styles.intro}>{group.intro}</Text> : null}
-      <View style={styles.block}>
-        <Text style={styles.label}>聚會時間</Text>
-        <Text style={styles.value}>{group.meetingTime ?? '詳洽同工'}</Text>
-      </View>
-      <View style={styles.block}>
-        <Text style={styles.label}>聚會地點</Text>
-        <Text style={styles.value}>{group.meetingPlace ?? '詳洽同工'}</Text>
-      </View>
       <View style={styles.block}>
         <Text style={styles.label}>小組長</Text>
-        <Text style={styles.value}>
-          {group.leader?.displayName ?? '即將更新'}
-        </Text>
+        <Text style={styles.value}>{leaderLabel}</Text>
       </View>
+      {group.intro ? <Text style={styles.intro}>{group.intro}</Text> : null}
+      {group.meetingTime ? (
+        <View style={styles.block}>
+          <Text style={styles.label}>聚會時間</Text>
+          <Text style={styles.value}>{group.meetingTime}</Text>
+        </View>
+      ) : null}
+      {group.meetingPlace ? (
+        <View style={styles.block}>
+          <Text style={styles.label}>聚會地點</Text>
+          <Text style={styles.value}>{group.meetingPlace}</Text>
+        </View>
+      ) : null}
       {!group.contactVisible ? (
         <Text style={styles.note}>
           聯絡方式未公開（需當事人同意才揭露，個資法蒐集最小化）。
@@ -110,13 +121,13 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.bg,
     flexGrow: 1,
   },
-  area: { fontSize: 13, color: theme.color.brand, fontWeight: '600' },
+  crumb: { fontSize: 13, color: theme.color.brand, fontWeight: '600' },
   title: { fontSize: 24, fontWeight: '700', color: theme.color.ink },
   intro: {
     fontSize: 16,
     lineHeight: 26,
     color: theme.color.ink,
-    marginVertical: 8,
+    marginVertical: 4,
   },
   block: {
     backgroundColor: theme.color.bgElevated,

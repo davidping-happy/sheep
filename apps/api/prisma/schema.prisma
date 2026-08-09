@@ -116,7 +116,7 @@ model Article {
   @@map("articles")
 }
 
-// ─────────────────────── 4. 牧區・小組 ───────────────────────
+// ─────────────────────── 4. 牧區・小區・小組 ───────────────────────
 
 model PastoralArea {
   id          String       @id @default(uuid())
@@ -124,18 +124,43 @@ model PastoralArea {
   description String?
   photoUrl    String?
   createdAt   DateTime     @default(now())
+  zones       PastoralZone[]
   groups      SmallGroup[]
   announcements Announcement[]
 
   @@map("pastoral_areas")
 }
 
+/// 小區：隸屬牧區，下含多個小組
+model PastoralZone {
+  id             String       @id @default(uuid())
+  pastoralArea   PastoralArea @relation(fields: [pastoralAreaId], references: [id], onDelete: Cascade)
+  pastoralAreaId String
+  /// 小區編號
+  code           String
+  /// 區長姓名（目錄文字）
+  leaderName     String       @default("")
+  intro          String?
+  photoUrl       String?      // 主圖＝imageUrls[0]
+  imageUrls      String[]     @default([])
+  groups         SmallGroup[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([pastoralAreaId])
+  @@map("pastoral_zones")
+}
+
 model SmallGroup {
   id             String       @id @default(uuid())
   pastoralArea   PastoralArea @relation(fields: [pastoralAreaId], references: [id])
   pastoralAreaId String
+  zone           PastoralZone @relation(fields: [zoneId], references: [id])
+  zoneId         String
   name           String
   intro          String?
+  /// 小組長姓名（目錄文字；leaderId 仍可對應帳號）
+  leaderName     String?
   photoUrl       String?      // 主圖＝imageUrls[0]，相容舊客戶端
   imageUrls      String[]     @default([]) // 最多 7 張
   meetingTime    String?      // 聚會時間（文字描述）
@@ -149,6 +174,7 @@ model SmallGroup {
   updatedAt      DateTime     @updatedAt
 
   @@index([pastoralAreaId])
+  @@index([zoneId])
   @@map("small_groups")
 }
 

@@ -52,24 +52,55 @@ async function main() {
       data: {
         name: '成二牧區',
         description: '成二牧區示範：歡迎新朋友認識小組生活，一起成為屬靈家庭。',
-        groups: {
-          create: [
-            {
-              name: '活水小組',
-              intro: '注重重讀經與彼此代禱，適合渴望扎根的弟兄姊妹。',
-              meetingTime: '週三 19:30',
-              meetingPlace: '副堂',
-            },
-            {
-              name: '嗎哪小組',
-              intro: '以生活分享與關懷為主，歡迎家庭與青年一同參與。',
-              meetingTime: '週五 20:00',
-              meetingPlace: '101 室',
-            },
-          ],
-        },
       },
     });
+    const zone = await prisma.pastoralZone.create({
+      data: {
+        pastoralAreaId: area.id,
+        code: '1',
+        leaderName: '示範區長',
+        intro: '第一小區：歡迎新朋友認識小組生活。',
+      },
+    });
+    await prisma.smallGroup.createMany({
+      data: [
+        {
+          pastoralAreaId: area.id,
+          zoneId: zone.id,
+          name: '活水小組',
+          leaderName: '示範組長甲',
+          intro: '著重讀經與彼此代禱，適合渴望扎根的弟兄姊妹。',
+          meetingTime: '週三 19:30',
+          meetingPlace: '副堂',
+        },
+        {
+          pastoralAreaId: area.id,
+          zoneId: zone.id,
+          name: '嗎哪小組',
+          leaderName: '示範組長乙',
+          intro: '以生活分享與關懷為主，歡迎家庭與青年一同參與。',
+          meetingTime: '週五 20:00',
+          meetingPlace: '101 室',
+        },
+      ],
+    });
+  }
+
+  // 既有牧區若尚無小區，補一筆預設小區
+  {
+    const zoneCount = await prisma.pastoralZone.count({
+      where: { pastoralAreaId: area.id },
+    });
+    if (zoneCount === 0) {
+      await prisma.pastoralZone.create({
+        data: {
+          pastoralAreaId: area.id,
+          code: '1',
+          leaderName: '',
+          intro: '預設小區',
+        },
+      });
+    }
   }
 
   const articles = [
