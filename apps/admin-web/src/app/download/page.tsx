@@ -3,18 +3,17 @@ const PRIMARY =
   'https://churchsheep-api.onrender.com/downloads/churchsheep-latest.apk';
 const ADMIN_MIRROR = '/downloads/churchsheep-latest.apk';
 const GITHUB =
-  'https://github.com/davidping-happy/sheep/releases/download/v1.1.5-preview/churchsheep-1.1.5.apk';
-const EXPO =
-  'https://expo.dev/artifacts/eas/ZLn45qzvTrD11p5MDZ2mm7cFiZmR8F-NMylHE3MWFHc.apk';
+  'https://github.com/davidping-happy/sheep/releases/download/v1.1.7-preview/churchsheep-1.1.7.apk';
+const EXPO = GITHUB;
 const RELEASE =
-  'https://github.com/davidping-happy/sheep/releases/tag/v1.1.5-preview';
+  'https://github.com/davidping-happy/sheep/releases/tag/v1.1.7-preview';
 
 export default function DownloadPage() {
   return (
     <div className="card" style={{ maxWidth: 560 }}>
       <h2>成二牧區 App — Android 下載</h2>
       <p className="muted">
-        目前版本 <strong>1.1.5</strong>。請用 <strong>Chrome</strong> 開啟本頁（不要用
+        目前版本 <strong>1.1.7</strong>。請用 <strong>Chrome</strong> 開啟本頁（不要用
         LINE 內建瀏覽器）。
       </p>
 

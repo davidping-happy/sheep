@@ -59,16 +59,32 @@ eas.json 的 preview 設定已更新為新網址。
 
 ### 步驟 2：建置 APK
 
+**雲端（EAS，有月額度）：**
+
 ```powershell
 cd c:\Users\User\Desktop\churchsheep\apps\mobile
 npm run apk
 ```
 
-- Android keystore（簽章金鑰）已由 Expo 保管，之後每次建置都用同一把
-- 排隊＋建置時間不固定，實測從送出到完成約 2 小時（免費方案排隊佔大部分）
-- 完成後終端機會給一個下載連結，也可到 <https://expo.dev> 的專案頁 → Builds 下載
+**本機（Windows 推薦；不佔 EAS 雲端額度）：**
 
-查看進度：
+> 注意：`eas build --local` **不支援 Windows**（需 macOS／Linux）。本專案改用 `expo prebuild` + Gradle。
+
+```powershell
+cd c:\Users\User\Desktop\churchsheep\apps\mobile
+# 需已 npx eas login；第一次會下載 EAS 簽章
+npm run apk:credentials
+npm run apk:local
+```
+
+- 需本機 **JDK 17** + **Android SDK**（`%LOCALAPPDATA%\Android\Sdk`）
+- 簽章與雲端 EAS 同一把（可覆蓋安裝舊 APK）
+- 完成後 APK 在 `apps/mobile/dist-apk/churchsheep-x.y.z.apk`
+- `credentials.json`／`credentials/` 已 gitignore，勿提交
+- 腳本會把 Gradle 快取固定到 `C:\gradle-home`（避免 Cursor 長路徑超過 Windows 260 字元）
+- 若 CMake／ninja 仍失敗：可建捷徑 `mklink /J C:\cs C:\Users\User\Desktop\churchsheep`，改在 `C:\cs\apps\mobile` 執行 `npm run apk:local`
+
+查看雲端進度：
 
 ```powershell
 npm run apk:status
@@ -80,7 +96,7 @@ npm run apk:status
 
 請改用 GitHub Release：
 
-https://github.com/davidping-happy/sheep/releases/download/v1.1.0-preview/churchsheep-1.1.0.apk
+https://github.com/davidping-happy/sheep/releases/download/v1.1.7-preview/churchsheep-1.1.7.apk
 
 （新版出包後：下載 APK → `gh release create` 上傳，或見 [TEST-LINKS.md](./TEST-LINKS.md)）
 
