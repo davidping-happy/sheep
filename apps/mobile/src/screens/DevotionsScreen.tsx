@@ -17,6 +17,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../lib/api';
+import {
+  exportDevotionDocx,
+  exportDevotionPdf,
+  shareDevotionText,
+  type DevotionExportInput,
+} from '../lib/devotion-export';
 import { theme } from '../theme';
 
 type DevotionCategory = 'SERMON' | 'MORNING_PRAYER' | 'DEVOTION';
@@ -68,6 +74,8 @@ export default function DevotionsScreen() {
   const [filterCategory, setFilterCategory] = useState<
     DevotionCategory | 'ALL'
   >('ALL');
+  const [shareTarget, setShareTarget] = useState<DevotionNote | null>(null);
+  const [sharing, setSharing] = useState(false);
 
   const load = useCallback(async () => {
     setError('');
@@ -162,6 +170,45 @@ export default function DevotionsScreen() {
         { text: '取消', style: 'cancel' },
         { text: '刪除', style: 'destructive', onPress: run },
       ]);
+    }
+  }
+
+  function toExportInput(n: DevotionNote): DevotionExportInput {
+    return {
+      noteDate: n.noteDate,
+      categoryLabel: categoryLabel(n.category),
+      scriptureRef: n.scriptureRef,
+      content: n.content,
+    };
+  }
+
+  function openShare(n: DevotionNote) {
+    setShareTarget(n);
+  }
+
+  async function runShare(
+    action: 'text' | 'pdf' | 'docx',
+    n: DevotionNote,
+  ) {
+    setSharing(true);
+    setError('');
+    try {
+      const input = toExportInput(n);
+      if (action === 'text') await shareDevotionText(input);
+      else if (action === 'pdf') await exportDevotionPdf(input);
+      else await exportDevotionDocx(input);
+      setShareTarget(null);
+    } catch (e) {
+      const msg =
+        e instanceof Error && e.message
+          ? e.message
+          : '分享失敗，請稍後再試';
+      setError(msg);
+      if (Platform.OS !== 'web') {
+        Alert.alert('分享失敗', msg);
+      }
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -298,9 +345,18 @@ export default function DevotionsScreen() {
                   </Text>
                 </View>
               </View>
-              <Pressable onPress={() => confirmDelete(item)}>
-                <Text style={styles.del}>刪除</Text>
-              </Pressable>
+              <View style={styles.cardActions}>
+                <Pressable
+                  onPress={() => openShare(item)}
+                  hitSlop={8}
+                  accessibilityLabel="分享"
+                >
+                  <Text style={styles.share}>分享</Text>
+                </Pressable>
+                <Pressable onPress={() => confirmDelete(item)} hitSlop={8}>
+                  <Text style={styles.del}>刪除</Text>
+                </Pressable>
+              </View>
             </View>
             {item.scriptureRef ? (
               <Text style={styles.ref}>{item.scriptureRef}</Text>
@@ -385,6 +441,28 @@ export default function DevotionsScreen() {
               </Text>
             </ScrollView>
             <View style={styles.modalActions}>
+              {editing ? (
+                <Pressable
+                  style={styles.shareModalBtn}
+                  onPress={() =>
+                    openShare({
+                      ...editing,
+                      category,
+                      scriptureRef: scriptureRef.trim() || null,
+                      content: content.trim() || editing.content,
+                    })
+                  }
+                >
+                  <Ionicons
+                    name="share-outline"
+                    size={18}
+                    color={theme.color.brand}
+                  />
+                  <Text style={styles.shareModalBtnText}>分享</Text>
+                </Pressable>
+              ) : (
+                <View style={{ flex: 1 }} />
+              )}
               <Pressable
                 style={styles.cancelBtn}
                 onPress={() => setModal(false)}
@@ -403,6 +481,67 @@ export default function DevotionsScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={!!shareTarget}
+        animationType="fade"
+        transparent
+        onRequestClose={() => !sharing && setShareTarget(null)}
+      >
+        <Pressable
+          style={styles.shareBackdrop}
+          onPress={() => !sharing && setShareTarget(null)}
+        >
+          <Pressable style={styles.shareSheet} onPress={() => {}}>
+            <Text style={styles.shareTitle}>分享靈修隨記</Text>
+            <Text style={styles.shareSub}>
+              可傳到 LINE、Email，或匯出檔案
+            </Text>
+            {(
+              [
+                {
+                  key: 'text' as const,
+                  label: '分享文字（LINE／Email…）',
+                  icon: 'chatbubble-ellipses-outline' as const,
+                },
+                {
+                  key: 'pdf' as const,
+                  label: Platform.OS === 'web' ? '匯出 PDF（列印／儲存）' : '匯出並分享 PDF',
+                  icon: 'document-text-outline' as const,
+                },
+                {
+                  key: 'docx' as const,
+                  label: Platform.OS === 'web' ? '下載 Word' : '匯出並分享 Word',
+                  icon: 'document-outline' as const,
+                },
+              ] as const
+            ).map((opt) => (
+              <Pressable
+                key={opt.key}
+                style={[styles.shareOption, sharing && { opacity: 0.5 }]}
+                disabled={sharing || !shareTarget}
+                onPress={() => shareTarget && runShare(opt.key, shareTarget)}
+              >
+                <Ionicons
+                  name={opt.icon}
+                  size={20}
+                  color={theme.color.brand}
+                />
+                <Text style={styles.shareOptionText}>{opt.label}</Text>
+              </Pressable>
+            ))}
+            <Pressable
+              style={styles.shareCancel}
+              disabled={sharing}
+              onPress={() => setShareTarget(null)}
+            >
+              <Text style={styles.shareCancelText}>
+                {sharing ? '處理中…' : '取消'}
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
@@ -497,11 +636,63 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   badgeText: { fontSize: 12, color: theme.color.brand, fontWeight: '600' },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  share: { fontSize: 13, color: theme.color.brand, fontWeight: '600' },
   del: { fontSize: 13, color: theme.color.danger },
   ref: { fontSize: 13, color: theme.color.inkMuted, marginBottom: 4 },
   preview: { fontSize: 15, lineHeight: 22, color: theme.color.ink },
   empty: { textAlign: 'center', color: theme.color.inkMuted, marginTop: 40 },
   error: { color: theme.color.danger, paddingHorizontal: 16, paddingTop: 8 },
+  shareBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  shareSheet: {
+    backgroundColor: theme.color.bgElevated,
+    borderTopLeftRadius: theme.radius.md,
+    borderTopRightRadius: theme.radius.md,
+    padding: 20,
+    paddingBottom: 28,
+    gap: 8,
+  },
+  shareTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.color.ink,
+    marginBottom: 2,
+  },
+  shareSub: {
+    fontSize: 13,
+    color: theme.color.inkMuted,
+    marginBottom: 8,
+  },
+  shareOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.color.bg,
+    borderWidth: 1,
+    borderColor: theme.color.border,
+  },
+  shareOptionText: { fontSize: 15, color: theme.color.ink, fontWeight: '500' },
+  shareCancel: { alignItems: 'center', paddingVertical: 14, marginTop: 4 },
+  shareCancelText: { fontSize: 15, color: theme.color.inkMuted },
+  shareModalBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+  },
+  shareModalBtnText: {
+    fontSize: 15,
+    color: theme.color.brand,
+    fontWeight: '600',
+  },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -566,6 +757,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 10,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
