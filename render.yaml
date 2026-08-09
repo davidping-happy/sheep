@@ -31,7 +31,7 @@ services:
       - key: APK_MIRROR_URL
         value: https://expo.dev/artifacts/eas/R3oe7VDGOlcRbpCPgAitt-CClmVKpDMO8toONCghiUE.apk
       - key: APK_FILE_NAME
-        value: churchsheep-1.1.3.apk
+        value: churchsheep-1.1.4.apk
       - key: CORS_ORIGINS
         value: "http://localhost:3001,http://127.0.0.1:3001,http://localhost:8081,http://127.0.0.1:8081,https://churchsheep-admin.onrender.com"
       - key: JWT_ACCESS_SECRET
@@ -73,6 +73,6 @@ services:
       - key: APK_MIRROR_URL
         value: https://expo.dev/artifacts/eas/R3oe7VDGOlcRbpCPgAitt-CClmVKpDMO8toONCghiUE.apk
       - key: APK_FILE_NAME
-        value: churchsheep-1.1.3.apk
+        value: churchsheep-1.1.4.apk
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
