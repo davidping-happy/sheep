@@ -28,28 +28,19 @@ interface PrayerItem {
   createdAt: string;
 }
 
-interface GroupOption {
-  id: string;
-  name: string;
-  areaName: string;
-}
-
-type Visibility = 'PRIVATE' | 'GROUP' | 'PUBLIC';
+type Visibility = 'PRIVATE' | 'PUBLIC';
 
 /**
- * 階段三代禱牆：私人／小組／公開、匿名、我已代禱、檢舉。
- * 公開內容需後台審核；私人對代禱同工可見。
+ * 代禱牆：私人／公開（需審核）、我已代禱、檢舉。
+ * （已取消「小組」「匿名」選項）
  */
 export default function PrayerScreen() {
   const [items, setItems] = useState<PrayerItem[]>([]);
-  const [groups, setGroups] = useState<GroupOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [content, setContent] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('PRIVATE');
-  const [sharedGroupId, setSharedGroupId] = useState('');
-  const [isAnonymous, setIsAnonymous] = useState(false);
   const [posting, setPosting] = useState(false);
   const [info, setInfo] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -57,40 +48,22 @@ export default function PrayerScreen() {
   const load = useCallback(async () => {
     setError('');
     try {
-      const [data, areas] = await Promise.all([
-        api<PrayerItem[]>('/prayer/feed'),
-        api<{ id: string; name: string; groups: { id: string; name: string }[] }[]>(
-          '/groups/areas',
-        ),
-      ]);
+      const data = await api<PrayerItem[]>('/prayer/feed');
       setItems(data);
-      const opts: GroupOption[] = [];
-      for (const a of areas) {
-        for (const g of a.groups ?? []) {
-          opts.push({ id: g.id, name: g.name, areaName: a.name });
-        }
-      }
-      setGroups(opts);
-      if (!sharedGroupId && opts[0]) setSharedGroupId(opts[0].id);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '載入失敗');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [sharedGroupId]);
+  }, []);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
 
   async function submit() {
     if (!content.trim()) return;
-    if (visibility === 'GROUP' && !sharedGroupId) {
-      setError('請選擇要分享的小組');
-      return;
-    }
     setPosting(true);
     setInfo('');
     setError('');
@@ -100,8 +73,7 @@ export default function PrayerScreen() {
         body: JSON.stringify({
           content: content.trim(),
           visibility,
-          isAnonymous,
-          ...(visibility === 'GROUP' ? { sharedGroupId } : {}),
+          isAnonymous: false,
         }),
       });
       setContent('');
@@ -188,7 +160,7 @@ export default function PrayerScreen() {
           textAlignVertical="top"
         />
         <View style={styles.row}>
-          {(['PRIVATE', 'GROUP', 'PUBLIC'] as Visibility[]).map((v) => (
+          {(['PRIVATE', 'PUBLIC'] as Visibility[]).map((v) => (
             <Pressable
               key={v}
               style={[styles.chip, visibility === v && styles.chipOn]}
@@ -197,54 +169,11 @@ export default function PrayerScreen() {
               <Text
                 style={[styles.chipText, visibility === v && styles.chipTextOn]}
               >
-                {v === 'PRIVATE'
-                  ? '私人'
-                  : v === 'GROUP'
-                    ? '小組'
-                    : '公開（需審核）'}
+                {v === 'PRIVATE' ? '私人' : '公開（需審核）'}
               </Text>
             </Pressable>
           ))}
-          <Pressable
-            style={[styles.chip, isAnonymous && styles.chipOn]}
-            onPress={() => setIsAnonymous((x) => !x)}
-          >
-            <Text
-              style={[styles.chipText, isAnonymous && styles.chipTextOn]}
-            >
-              匿名
-            </Text>
-          </Pressable>
         </View>
-        {visibility === 'GROUP' ? (
-          <View style={styles.row}>
-            {groups.length === 0 ? (
-              <Text style={styles.metaHint}>
-                尚未加入小組，請先向同工申請入組。
-              </Text>
-            ) : (
-              groups.map((g) => (
-                <Pressable
-                  key={g.id}
-                  style={[
-                    styles.chip,
-                    sharedGroupId === g.id && styles.chipOn,
-                  ]}
-                  onPress={() => setSharedGroupId(g.id)}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      sharedGroupId === g.id && styles.chipTextOn,
-                    ]}
-                  >
-                    {g.areaName}/{g.name}
-                  </Text>
-                </Pressable>
-              ))
-            )}
-          </View>
-        ) : null}
         <Pressable
           style={[styles.postBtn, posting && { opacity: 0.6 }]}
           onPress={submit}
