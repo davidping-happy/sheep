@@ -3,7 +3,7 @@
     "name": "成二牧區",
     "slug": "churchsheep",
     "owner": "davidping",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "runtimeVersion": {
       "policy": "sdkVersion"
     },
@@ -18,11 +18,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "org.church.churchsheep",
-      "buildNumber": "6"
+      "buildNumber": "7"
     },
     "android": {
       "package": "org.church.churchsheep",
-      "versionCode": 9,
+      "versionCode": 10,
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
