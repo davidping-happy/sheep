@@ -62,8 +62,8 @@ export const FEATURES: FeatureDef[] = [
   },
   {
     key: 'Events',
-    title: '活動報名簽到',
-    desc: '聚會報名・現場簽到',
+    title: '課程活動報名',
+    desc: '課程報名・活動簽到',
     icon: 'calendar-outline',
     family: 'ion',
     color: '#8B6B4A',

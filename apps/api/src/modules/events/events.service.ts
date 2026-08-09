@@ -134,6 +134,15 @@ export class EventsService {
     if (event.registerDeadline && event.registerDeadline < new Date()) {
       throw new BadRequestException('報名已截止');
     }
+    if (!dto.privacyConsent) {
+      throw new BadRequestException('請先同意個資聲明');
+    }
+    const name = dto.registrantName?.trim();
+    const group = dto.registrantGroup?.trim();
+    const phone = dto.registrantPhone?.trim();
+    if (!name || !group || !phone) {
+      throw new BadRequestException('請填寫姓名、小組與電話');
+    }
     if (event.requiresGuardianConsent && !dto.guardianConsent) {
       throw new BadRequestException('此活動需監護人同意');
     }
@@ -146,15 +155,23 @@ export class EventsService {
         ? RegistrationStatus.WAITLISTED
         : RegistrationStatus.REGISTERED;
 
+    const form = {
+      registrantName: name,
+      registrantGroup: group,
+      registrantPhone: phone,
+      privacyConsent: true,
+      guardianConsent: dto.guardianConsent ?? false,
+    };
+
     return this.prisma.eventRegistration.upsert({
       where: { eventId_userId: { eventId, userId: user.id } },
       create: {
         eventId,
         userId: user.id,
         status,
-        guardianConsent: dto.guardianConsent ?? false,
+        ...form,
       },
-      update: { status, guardianConsent: dto.guardianConsent ?? false },
+      update: { status, ...form },
     });
   }
 
@@ -193,6 +210,30 @@ export class EventsService {
       expiresAt,
       ttlSeconds: QR_TTL_SECONDS,
     };
+  }
+
+  /** 會友一鍵簽到（須已報名且狀態為 REGISTERED） */
+  async checkinSelf(user: AuthUser, eventId: string) {
+    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) throw new NotFoundException();
+
+    const reg = await this.prisma.eventRegistration.findUnique({
+      where: { eventId_userId: { eventId, userId: user.id } },
+    });
+    if (!reg || reg.status !== RegistrationStatus.REGISTERED) {
+      throw new BadRequestException('請先完成報名後再簽到');
+    }
+
+    await this.prisma.eventCheckin.upsert({
+      where: { eventId_userId: { eventId, userId: user.id } },
+      create: {
+        eventId,
+        userId: user.id,
+        method: CheckinMethod.MANUAL,
+      },
+      update: {},
+    });
+    return { ok: true, message: '完成簽到' };
   }
 
   /** 會友掃描／輸入動態碼簽到（須已報名且狀態為 REGISTERED） */

@@ -92,7 +92,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen
         name="Events"
         component={EventsScreen}
-        options={{ title: '活動報名簽到' }}
+        options={{ title: '課程活動報名' }}
       />
       <HomeStack.Screen
         name="Devotions"

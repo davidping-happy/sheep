@@ -77,6 +77,12 @@ export class EventsController {
     return this.service.issueCheckinToken(user, id);
   }
 
+  /** 會友一鍵簽到（課程活動） */
+  @Post(':id/checkin-self')
+  checkinSelf(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.checkinSelf(user, id);
+  }
+
   @Post(':id/checkin')
   checkin(
     @CurrentUser() user: AuthUser,

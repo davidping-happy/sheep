@@ -6,7 +6,7 @@ const MODULES = [
   { name: '靈修佳文 (CMS)', desc: '草稿、編輯、預覽、發布／下架', stage: '階段二 ✓', href: '/articles' },
   { name: '牧區・小組', desc: '目錄式介紹資料維護', stage: '階段一 ✓', href: '/groups' },
   { name: '公告分眾推播', desc: '全牧區／小組／角色（FCM stub）', stage: '階段二 ✓', href: '/announcements' },
-  { name: '活動報名簽到', desc: '動態 QR 輪替、名單簽到狀態、CSV', stage: '階段三 ✓', href: '/events' },
+  { name: '課程活動報名', desc: '報名名單、簽到狀態、CSV', stage: '階段三 ✓', href: '/events' },
   { name: '代禱牆審核', desc: '公開審核、危機標記、匿名稽核', stage: '階段三 ✓', href: '/prayer' },
 ];
 

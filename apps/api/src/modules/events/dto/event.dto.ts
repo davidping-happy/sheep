@@ -55,6 +55,19 @@ export class CreateEventDto {
 }
 
 export class RegisterEventDto {
+  @IsString()
+  registrantName!: string;
+
+  @IsString()
+  registrantGroup!: string;
+
+  @IsString()
+  registrantPhone!: string;
+
+  /** 個資聲明同意（必填） */
+  @IsBoolean()
+  privacyConsent!: boolean;
+
   // 兒少活動需監護人同意 (§6.1)
   @IsOptional()
   @IsBoolean()

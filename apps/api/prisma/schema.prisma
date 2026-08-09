@@ -200,6 +200,11 @@ model EventRegistration {
   userId        String
   status        String   @default("REGISTERED")
   guardianConsent Boolean @default(false)
+  /// 報名表單：姓名／小組／電話（可與帳號資料不同）
+  registrantName  String?
+  registrantGroup String?
+  registrantPhone String?
+  privacyConsent  Boolean @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
