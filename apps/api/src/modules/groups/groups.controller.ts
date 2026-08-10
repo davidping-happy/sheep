@@ -41,7 +41,8 @@ class CreateZoneDto {
 class UpdateZoneDto extends PartialType(CreateZoneDto) {}
 
 class CreateGroupDto {
-  @IsUUID() zoneId!: string;
+  /** 小區 id（含 migration 舊資料 `{uuid}-zone-1`，故不強制 UUID 格式） */
+  @IsString() zoneId!: string;
   @IsOptional() @IsUUID() pastoralAreaId?: string;
   @IsString() name!: string;
   @IsOptional() @IsString() intro?: string;
