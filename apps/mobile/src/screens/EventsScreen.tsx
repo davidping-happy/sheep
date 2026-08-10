@@ -70,14 +70,19 @@ export default function EventsScreen() {
   const load = useCallback(async () => {
     setError('');
     try {
-      const [data, mine] = await Promise.all([
-        api<EventItem[]>('/events'),
-        api<{ eventId: string; status: string }[]>('/events/mine'),
-      ]);
+      // 活動列表公開；勿與 /mine 綁在同一個 Promise.all（登入失效時整頁會變空）
+      const data = await api<EventItem[]>('/events', {}, true);
       setEvents(data);
-      const map: Record<string, string> = {};
-      for (const m of mine) map[m.eventId] = m.status;
-      setRegs(map);
+      try {
+        const mine = await api<{ eventId: string; status: string }[]>(
+          '/events/mine',
+        );
+        const map: Record<string, string> = {};
+        for (const m of mine) map[m.eventId] = m.status;
+        setRegs(map);
+      } catch {
+        setRegs({});
+      }
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '載入失敗');
     } finally {

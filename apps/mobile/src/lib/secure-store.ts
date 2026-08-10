@@ -23,15 +23,29 @@ async function canUseSecureStore() {
   }
 }
 
+type TokenListener = (signedIn: boolean) => void;
+const listeners = new Set<TokenListener>();
+
+function notify(signedIn: boolean) {
+  for (const fn of listeners) fn(signedIn);
+}
+
 export const tokenStore = {
+  onChange(fn: TokenListener) {
+    listeners.add(fn);
+    return () => {
+      listeners.delete(fn);
+    };
+  },
   async save(accessToken: string, refreshToken: string) {
     if (await canUseSecureStore()) {
       await SecureStore.setItemAsync(ACCESS, accessToken);
       await SecureStore.setItemAsync(REFRESH, refreshToken);
-      return;
+    } else {
+      memory[ACCESS] = accessToken;
+      memory[REFRESH] = refreshToken;
     }
-    memory[ACCESS] = accessToken;
-    memory[REFRESH] = refreshToken;
+    notify(true);
   },
   async getAccess() {
     if (await canUseSecureStore()) {
@@ -49,9 +63,10 @@ export const tokenStore = {
     if (await canUseSecureStore()) {
       await SecureStore.deleteItemAsync(ACCESS);
       await SecureStore.deleteItemAsync(REFRESH);
-      return;
+    } else {
+      memory[ACCESS] = null;
+      memory[REFRESH] = null;
     }
-    memory[ACCESS] = null;
-    memory[REFRESH] = null;
+    notify(false);
   },
 };

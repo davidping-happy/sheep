@@ -13,6 +13,8 @@ import {
   AuthUser,
   CurrentUser,
 } from '../../auth/decorators/current-user.decorator';
+import { OptionalAuth } from '../../auth/decorators/optional-auth.decorator';
+import { Public } from '../../auth/decorators/public.decorator';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { EventsService } from './events.service';
 import {
@@ -35,6 +37,8 @@ export class EventsController {
     return this.service.create(user, dto);
   }
 
+  /** 活動目錄公開；報名／簽到仍需登入 */
+  @Public()
   @Get()
   list() {
     return this.service.list();
@@ -52,8 +56,11 @@ export class EventsController {
     return this.service.remove(id);
   }
 
+  /** 登入失效時回空陣列，避免 APP 整頁載入失敗 */
+  @OptionalAuth()
   @Get('mine')
-  mine(@CurrentUser('id') userId: string) {
+  mine(@CurrentUser('id') userId?: string) {
+    if (!userId) return [];
     return this.service.myRegistrations(userId);
   }
 

@@ -37,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSignedIn(!!t);
       setReady(true);
     });
+    // refresh 失敗清 token 時同步登出，避免畫面以為已登入卻一直 Unauthorized
+    return tokenStore.onChange(setSignedIn);
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
