@@ -8,6 +8,7 @@ import {
 import {
   ModerationStatus,
   Role,
+  SensitiveCategory,
   Visibility,
 } from '../../common/enums';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -29,7 +30,7 @@ const ANON_DISPLAY = '一位弟兄姊妹';
 /**
  * 7. 禱告代禱牆 — 隱私與內容審核為第一優先 (§6.2 / 階段三)。
  *  - 預設 PRIVATE（僅作者＋代禱／牧區同工）
- *  - GROUP：須為小組成員；PUBLIC：發布前人工審核
+ *  - GROUP：須為小組成員；PUBLIC：一般內容直接上牆，敏感／危機另審
  *  - 匿名貼文真實身份加密另表；危機內容不公開並稽核通報
  */
 @Injectable()
@@ -66,11 +67,16 @@ export class PrayerService {
       sharedGroupId = dto.sharedGroupId;
     }
 
-    // 公開內容需人工審核；私人/小組可見可略過 (§6.2 選項一)
-    const moderationStatus =
-      visibility === Visibility.PUBLIC
-        ? ModerationStatus.PENDING
-        : ModerationStatus.APPROVED;
+    // 公開：一般內容直接上牆；涉及第三人／未成年仍進審核；危機類自動標記不公開
+    let moderationStatus = ModerationStatus.APPROVED;
+    if (crisis) {
+      moderationStatus = ModerationStatus.AUTO_FLAGGED;
+    } else if (
+      visibility === Visibility.PUBLIC &&
+      sensitiveCategory !== SensitiveCategory.NONE
+    ) {
+      moderationStatus = ModerationStatus.PENDING;
+    }
 
     const request = await this.prisma.prayerRequest.create({
       data: {
@@ -80,9 +86,7 @@ export class PrayerService {
         sharedGroupId,
         isAnonymous: dto.isAnonymous ?? false,
         sensitiveCategory,
-        moderationStatus: crisis
-          ? ModerationStatus.AUTO_FLAGGED
-          : moderationStatus,
+        moderationStatus,
         escalated: crisis,
         // 公開牆預設 30 天後可封存（延伸；排程另接）
         archiveAt:
@@ -186,6 +190,37 @@ export class PrayerService {
       },
       orderBy: [{ escalated: 'desc' }, { createdAt: 'asc' }],
     });
+  }
+
+  /** 後台：近期代禱（含已上牆），方便同工確認會友是否有成功送出 */
+  async adminRecent(user: AuthUser, take = 50) {
+    this.assertModerator(user);
+    return this.prisma.prayerRequest.findMany({
+      where: { takenDownAt: null },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Math.max(take, 1), 100),
+    });
+  }
+
+  /** 將仍卡在 PENDING 的一般公開代禱一次核准上牆（部署後補救用） */
+  async approveStalePublicPending(user: AuthUser) {
+    this.assertModerator(user);
+    const result = await this.prisma.prayerRequest.updateMany({
+      where: {
+        takenDownAt: null,
+        visibility: Visibility.PUBLIC,
+        moderationStatus: ModerationStatus.PENDING,
+        sensitiveCategory: SensitiveCategory.NONE,
+      },
+      data: { moderationStatus: ModerationStatus.APPROVED },
+    });
+    await this.audit.log({
+      actorId: user.id,
+      action: 'PRAYER_APPROVE_STALE_PUBLIC',
+      targetType: 'PrayerRequest',
+      metadata: { count: result.count },
+    });
+    return result;
   }
 
   async moderate(user: AuthUser, id: string, dto: ModeratePrayerDto) {

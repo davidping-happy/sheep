@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useAuth } from '../auth/AuthContext';
 import { api, ApiError } from '../lib/api';
 import { theme } from '../theme';
 
@@ -35,6 +36,7 @@ type Visibility = 'PRIVATE' | 'PUBLIC';
  * （已取消「小組」「匿名」選項）
  */
 export default function PrayerScreen() {
+  const { signOut } = useAuth();
   const [items, setItems] = useState<PrayerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,18 +47,30 @@ export default function PrayerScreen() {
   const [info, setInfo] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const handleAuthError = useCallback(
+    async (e: unknown, fallback: string) => {
+      if (e instanceof ApiError && e.status === 401) {
+        setError('登入已失效，請重新登入後再發布／查看代禱。');
+        await signOut();
+        return;
+      }
+      setError(e instanceof ApiError ? e.message : fallback);
+    },
+    [signOut],
+  );
+
   const load = useCallback(async () => {
     setError('');
     try {
       const data = await api<PrayerItem[]>('/prayer/feed');
       setItems(data);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '載入失敗');
+      await handleAuthError(e, '載入失敗');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [handleAuthError]);
 
   useEffect(() => {
     load();
@@ -78,19 +92,19 @@ export default function PrayerScreen() {
       });
       setContent('');
       if (created.moderationStatus === 'PENDING') {
-        setInfo('已送出，公開內容需同工審核後才會顯示給其他人。');
+        setInfo('已送出，內容需同工審核後才會顯示給其他人。');
       } else if (created.moderationStatus === 'AUTO_FLAGGED') {
         setInfo('已標記需關懷同工處理，不會公開曝光。');
       } else {
         setInfo(
           visibility === 'PRIVATE'
             ? '已發布（私人：僅你與代禱同工可見）。'
-            : '已發布。',
+            : '已公開發布。',
         );
       }
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '發布失敗');
+      await handleAuthError(e, '發布失敗');
     } finally {
       setPosting(false);
     }
@@ -102,7 +116,7 @@ export default function PrayerScreen() {
       await api(`/prayer/${id}/takedown`, { method: 'POST' });
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '下架失敗');
+      await handleAuthError(e, '下架失敗');
     } finally {
       setBusyId(null);
     }
@@ -118,7 +132,7 @@ export default function PrayerScreen() {
       setInfo('已記錄你的代禱。');
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '操作失敗');
+      await handleAuthError(e, '操作失敗');
     } finally {
       setBusyId(null);
     }
@@ -133,7 +147,7 @@ export default function PrayerScreen() {
       });
       setInfo('已送出檢舉，同工將複核。');
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : '檢舉失敗');
+      await handleAuthError(e, '檢舉失敗');
     } finally {
       setBusyId(null);
     }
@@ -169,7 +183,7 @@ export default function PrayerScreen() {
               <Text
                 style={[styles.chipText, visibility === v && styles.chipTextOn]}
               >
-                {v === 'PRIVATE' ? '私人' : '公開（需審核）'}
+                {v === 'PRIVATE' ? '私人' : '公開'}
               </Text>
             </Pressable>
           ))}

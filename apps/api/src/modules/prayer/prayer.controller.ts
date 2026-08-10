@@ -43,6 +43,18 @@ export class PrayerController {
   }
 
   @Roles(Role.STAFF)
+  @Get('moderation/recent')
+  recent(@CurrentUser() user: AuthUser) {
+    return this.service.adminRecent(user);
+  }
+
+  @Roles(Role.STAFF)
+  @Post('moderation/approve-stale-public')
+  approveStale(@CurrentUser() user: AuthUser) {
+    return this.service.approveStalePublicPending(user);
+  }
+
+  @Roles(Role.STAFF)
   @Post(':id/moderate')
   moderate(
     @CurrentUser() user: AuthUser,
