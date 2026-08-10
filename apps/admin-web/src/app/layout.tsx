@@ -14,7 +14,7 @@ const NAV = [
   { href: '/groups', label: '牧區・小組' },
   { href: '/announcements', label: '公告推播' },
   { href: '/events', label: '活動報名簽到' },
-  { href: '/prayer', label: '代禱牆審核' },
+  { href: '/prayer', label: '代禱牆（同工）' },
   { href: '/audit', label: '稽核紀錄' },
 ];
 

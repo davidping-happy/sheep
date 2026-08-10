@@ -92,4 +92,11 @@ export class PrayerController {
   takeDown(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.service.takeDown(user, id);
   }
+
+  /** 後台刪除（軟刪除／下架），STAFF+ */
+  @Roles(Role.STAFF)
+  @Post(':id/admin-delete')
+  adminDelete(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.takeDown(user, id);
+  }
 }

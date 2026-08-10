@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../auth/AuthContext';
 import { api, ApiError } from '../lib/api';
 import { theme } from '../theme';
@@ -22,6 +23,7 @@ interface PrayerItem {
   authorDisplay?: string;
   authorId: string | null;
   isOwner?: boolean;
+  canTakeDown?: boolean;
   sensitiveCategory: string;
   escalated: boolean;
   responseCount?: number;
@@ -72,9 +74,11 @@ export default function PrayerScreen() {
     }
   }, [handleAuthError]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   async function submit() {
     if (!content.trim()) return;
@@ -261,12 +265,12 @@ export default function PrayerScreen() {
                     <Text style={styles.actionMuted}>檢舉</Text>
                   </Pressable>
                 ) : null}
-                {item.isOwner ? (
+                {item.isOwner || item.canTakeDown ? (
                   <Pressable
                     disabled={busyId === item.id}
                     onPress={() => takeDown(item.id)}
                   >
-                    <Text style={styles.takedown}>下架</Text>
+                    <Text style={styles.takedown}>刪除</Text>
                   </Pressable>
                 ) : null}
               </View>

@@ -7,7 +7,7 @@ const MODULES = [
   { name: '牧區・小組', desc: '牧區 → 小區 → 小組 分層目錄維護', stage: '階段一 ✓', href: '/groups' },
   { name: '公告分眾推播', desc: '全牧區／小組／角色（FCM stub）', stage: '階段二 ✓', href: '/announcements' },
   { name: '課程活動報名', desc: '報名名單、簽到狀態、CSV', stage: '階段三 ✓', href: '/events' },
-  { name: '代禱牆審核', desc: '公開審核、危機標記、匿名稽核', stage: '階段三 ✓', href: '/prayer' },
+  { name: '代禱牆（同工）', desc: '私人關懷、公開審核、刪除', stage: '階段三 ✓', href: '/prayer' },
 ];
 
 export default function DashboardPage() {

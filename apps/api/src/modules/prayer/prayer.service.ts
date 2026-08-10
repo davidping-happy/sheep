@@ -192,13 +192,24 @@ export class PrayerService {
     });
   }
 
-  /** 後台：近期代禱（含已上牆），方便同工確認會友是否有成功送出 */
-  async adminRecent(user: AuthUser, take = 50) {
+  /** 後台：近期代禱（含私人／公開／待審），方便同工關懷與刪除 */
+  async adminRecent(user: AuthUser, take = 100) {
     this.assertModerator(user);
-    return this.prisma.prayerRequest.findMany({
+    const rows = await this.prisma.prayerRequest.findMany({
       where: { takenDownAt: null },
+      include: {
+        author: { select: { id: true, displayName: true, email: true } },
+      },
       orderBy: { createdAt: 'desc' },
-      take: Math.min(Math.max(take, 1), 100),
+      take: Math.min(Math.max(take, 1), 200),
+    });
+    return rows.map((r) => {
+      const { author, ...rest } = r;
+      return {
+        ...rest,
+        authorDisplayName: author.displayName,
+        authorEmail: author.email,
+      };
     });
   }
 
@@ -310,13 +321,23 @@ export class PrayerService {
   async takeDown(user: AuthUser, id: string) {
     const req = await this.prisma.prayerRequest.findUnique({ where: { id } });
     if (!req) throw new NotFoundException();
-    if (req.authorId !== user.id && user.role !== Role.ADMIN) {
-      throw new ForbiddenException('只能下架自己的代禱事項');
+    const isCareStaff =
+      user.role === Role.STAFF || user.role === Role.ADMIN;
+    if (req.authorId !== user.id && !isCareStaff) {
+      throw new ForbiddenException('只能下架自己的代禱事項，或由代禱同工處理');
     }
-    return this.prisma.prayerRequest.update({
+    const updated = await this.prisma.prayerRequest.update({
       where: { id },
       data: { takenDownAt: new Date() },
     });
+    await this.audit.log({
+      actorId: user.id,
+      action: 'PRAYER_TAKEDOWN',
+      targetType: 'PrayerRequest',
+      targetId: id,
+      metadata: { byStaff: isCareStaff && req.authorId !== user.id },
+    });
+    return updated;
   }
 
   private assertModerator(user: AuthUser) {
@@ -374,6 +395,8 @@ export class PrayerService {
     extra: { responseCount: number; iPrayed: boolean },
   ) {
     const isOwner = req.authorId === viewer.id;
+    const isCareStaff =
+      viewer.role === Role.STAFF || viewer.role === Role.ADMIN;
     const { _count, responses, ...rest } = req as typeof req & {
       _count?: unknown;
       responses?: unknown;
@@ -385,8 +408,11 @@ export class PrayerService {
         ? ANON_DISPLAY
         : isOwner
           ? '我'
-          : '會友',
+          : isCareStaff
+            ? '會友'
+            : '會友',
       isOwner,
+      canTakeDown: isOwner || isCareStaff,
       responseCount: extra.responseCount,
       iPrayed: extra.iPrayed,
     };

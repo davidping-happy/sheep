@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch, ApiError } from '../../lib/api';
 import { AdminLoginForm, useAdminAuth } from '../../lib/useAdminAuth';
 
@@ -14,7 +14,11 @@ interface PrayerItem {
   reportCount: number;
   isAnonymous: boolean;
   createdAt: string;
+  authorDisplayName?: string;
+  authorEmail?: string;
 }
+
+type Filter = 'ALL' | 'PRIVATE' | 'PUBLIC' | 'PENDING';
 
 const SENSITIVE_LABEL: Record<string, string> = {
   SELF_HARM: '自傷/自殺意念',
@@ -24,15 +28,19 @@ const SENSITIVE_LABEL: Record<string, string> = {
   INVOLVES_MINOR: '涉及未成年',
 };
 
-/** 階段三：代禱牆審核＋近期列表＋匿名身份稽核 */
+/**
+ * 代禱牆後台：私人代禱（同工關懷）＋公開／待審＋刪除。
+ * 注意：私人代禱會直接核准，不會出現在「待審佇列」，請看「私人」或「全部」。
+ */
 export default function PrayerModerationPage() {
   const auth = useAdminAuth();
   const [queue, setQueue] = useState<PrayerItem[]>([]);
   const [recent, setRecent] = useState<PrayerItem[]>([]);
+  const [filter, setFilter] = useState<Filter>('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [revealInfo, setRevealInfo] = useState<string>('');
+  const [revealInfo, setRevealInfo] = useState('');
   const [info, setInfo] = useState('');
 
   const loadQueue = useCallback(async (jwt: string) => {
@@ -56,6 +64,17 @@ export default function PrayerModerationPage() {
     if (auth.token) loadQueue(auth.token);
   }, [auth.token, loadQueue]);
 
+  const filtered = useMemo(() => {
+    if (filter === 'PENDING') return queue;
+    if (filter === 'PRIVATE') {
+      return recent.filter((p) => p.visibility === 'PRIVATE');
+    }
+    if (filter === 'PUBLIC') {
+      return recent.filter((p) => p.visibility === 'PUBLIC');
+    }
+    return recent;
+  }, [filter, queue, recent]);
+
   async function moderate(id: string, decision: 'APPROVED' | 'REJECTED') {
     if (!auth.token) return;
     setBusyId(id);
@@ -68,6 +87,25 @@ export default function PrayerModerationPage() {
       await loadQueue(auth.token);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '操作失敗');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function removeItem(id: string) {
+    if (!auth.token) return;
+    if (!confirm('確定刪除此代禱事項？會友端將不再顯示。')) return;
+    setBusyId(id);
+    setError('');
+    try {
+      await apiFetch(`/prayer/${id}/admin-delete`, {
+        method: 'POST',
+        token: auth.token,
+      });
+      setInfo('已刪除（下架）。');
+      await loadQueue(auth.token);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '刪除失敗');
     } finally {
       setBusyId(null);
     }
@@ -116,11 +154,14 @@ export default function PrayerModerationPage() {
     return (
       <AdminLoginForm
         title="代禱牆審核"
-        hint="階段三：公開內容審核、危機標記、匿名身份稽核（ADMIN）。"
+        hint="私人代禱、公開審核、危機標記、刪除（需 STAFF／ADMIN）。"
         auth={auth}
       />
     );
   }
+
+  const privateCount = recent.filter((p) => p.visibility === 'PRIVATE').length;
+  const publicCount = recent.filter((p) => p.visibility === 'PUBLIC').length;
 
   return (
     <div>
@@ -133,7 +174,7 @@ export default function PrayerModerationPage() {
           flexWrap: 'wrap',
         }}
       >
-        <h2>代禱牆審核</h2>
+        <h2>代禱牆（同工）</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button
             style={ghostBtn}
@@ -149,48 +190,50 @@ export default function PrayerModerationPage() {
           </button>
         </div>
       </div>
+
       <p className="muted">
-        一般公開代禱會直接上牆；涉及第三人／未成年進審核佇列；危機類自動
-        <span className="badge">AUTO_FLAGGED</span>
-        ，不公開曝光。請從左側選單進入「代禱牆審核」（不是課程活動報名）。
+        私人代禱只給作者與代禱同工看，會直接進入列表（不會出現在待審）。請用下方篩選查看。此頁是「代禱牆」，不是「課程活動報名」。
       </p>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '12px 0' }}>
+        {(
+          [
+            ['ALL', `全部 (${recent.length})`],
+            ['PRIVATE', `私人 (${privateCount})`],
+            ['PUBLIC', `公開 (${publicCount})`],
+            ['PENDING', `待審 (${queue.length})`],
+          ] as [Filter, string][]
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            style={filter === key ? filterOn : ghostBtn}
+            onClick={() => setFilter(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
       {info ? <p style={{ color: '#166534' }}>{info}</p> : null}
       {revealInfo ? <p style={{ color: '#92400e' }}>{revealInfo}</p> : null}
       {loading ? <p className="muted">載入中…</p> : null}
 
-      <h3 style={{ marginTop: 24 }}>待審核佇列 ({queue.length})</h3>
-      {!loading && queue.length === 0 ? (
+      {!loading && filtered.length === 0 ? (
         <div className="card">
-          <p className="muted">目前沒有待審核項目。</p>
+          <p className="muted">
+            {filter === 'PRIVATE'
+              ? '目前沒有私人代禱。若會友剛發布仍看不到，請確認對方 APP 已重新登入成功。'
+              : filter === 'PENDING'
+                ? '目前沒有待審項目。'
+                : '尚無代禱紀錄。'}
+          </p>
         </div>
       ) : null}
 
-      {queue.map((item) => (
+      {filtered.map((item) => (
         <PrayerCard
-          key={item.id}
-          item={item}
-          busyId={busyId}
-          onApprove={() => moderate(item.id, 'APPROVED')}
-          onReject={() => moderate(item.id, 'REJECTED')}
-          onReveal={item.isAnonymous ? () => reveal(item.id) : undefined}
-        />
-      ))}
-
-      <h3 style={{ marginTop: 32 }}>近期代禱 ({recent.length})</h3>
-      <p className="muted">
-        含已上牆內容。若此處也是空的，代表會友端尚未成功送出（常見原因：APP
-        登入失效顯示 Unauthorized）。
-      </p>
-      {!loading && recent.length === 0 ? (
-        <div className="card">
-          <p className="muted">尚無任何代禱紀錄。</p>
-        </div>
-      ) : null}
-      {recent.map((item) => (
-        <PrayerCard
-          key={`r-${item.id}`}
+          key={`${filter}-${item.id}`}
           item={item}
           busyId={busyId}
           onApprove={
@@ -205,6 +248,7 @@ export default function PrayerModerationPage() {
               ? () => moderate(item.id, 'REJECTED')
               : undefined
           }
+          onDelete={() => removeItem(item.id)}
           onReveal={item.isAnonymous ? () => reveal(item.id) : undefined}
         />
       ))}
@@ -217,12 +261,14 @@ function PrayerCard({
   busyId,
   onApprove,
   onReject,
+  onDelete,
   onReveal,
 }: {
   item: PrayerItem;
   busyId: string | null;
   onApprove?: () => void;
   onReject?: () => void;
+  onDelete: () => void;
   onReveal?: () => void;
 }) {
   return (
@@ -230,7 +276,13 @@ function PrayerCard({
       <div
         style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}
       >
-        <span className="badge">{item.visibility}</span>
+        <span className="badge">
+          {item.visibility === 'PRIVATE'
+            ? '私人'
+            : item.visibility === 'PUBLIC'
+              ? '公開'
+              : item.visibility}
+        </span>
         <span className="badge">{item.moderationStatus}</span>
         {item.isAnonymous ? <span className="badge">匿名</span> : null}
         {item.reportCount > 0 ? (
@@ -246,6 +298,13 @@ function PrayerCard({
           <span style={dangerBadge}>已通報關懷同工</span>
         ) : null}
       </div>
+
+      {(item.authorDisplayName || item.authorEmail) && (
+        <p className="muted" style={{ margin: '0 0 8px' }}>
+          作者：{item.authorDisplayName ?? '（無姓名）'}
+          {item.authorEmail ? ` · ${item.authorEmail}` : ''}
+        </p>
+      )}
 
       <p style={{ margin: '0 0 12px', lineHeight: 1.6 }}>{item.content}</p>
 
@@ -275,6 +334,13 @@ function PrayerCard({
             退回
           </button>
         ) : null}
+        <button
+          style={rejectBtn}
+          disabled={busyId === item.id}
+          onClick={onDelete}
+        >
+          刪除
+        </button>
         {onReveal ? (
           <button
             style={ghostBtn}
@@ -300,6 +366,13 @@ const ghostBtn: React.CSSProperties = {
   borderRadius: 8,
   cursor: 'pointer',
   fontSize: 13,
+};
+const filterOn: React.CSSProperties = {
+  ...ghostBtn,
+  background: '#fef3c7',
+  borderColor: '#d97706',
+  color: '#92400e',
+  fontWeight: 600,
 };
 const approveBtn: React.CSSProperties = {
   padding: '8px 16px',
