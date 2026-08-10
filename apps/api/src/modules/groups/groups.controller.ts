@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
@@ -76,6 +77,7 @@ export class GroupsController {
 
   @Public()
   @Get('areas')
+  @Header('Cache-Control', 'no-store')
   areas() {
     return this.service.listAreas();
   }
@@ -103,6 +105,7 @@ export class GroupsController {
 
   @Public()
   @Get('zones/:id')
+  @Header('Cache-Control', 'no-store')
   zone(@Param('id') id: string) {
     return this.service.getZone(id);
   }

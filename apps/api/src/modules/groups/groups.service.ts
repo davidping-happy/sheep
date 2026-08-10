@@ -71,6 +71,7 @@ export class GroupsService {
             intro: true,
             photoUrl: true,
             imageUrls: true,
+            _count: { select: { groups: true } },
             groups: {
               select: {
                 id: true,
@@ -92,10 +93,16 @@ export class GroupsService {
     });
 
     return areas.map((area) => {
-      const zones = area.zones.map((z) => ({
-        ...withImages(z),
-        groups: z.groups.map(withImages),
-      }));
+      const zones = area.zones.map((z) => {
+        const groups = z.groups.map(withImages);
+        const groupCount = z._count?.groups ?? groups.length;
+        const { _count: _ignored, ...zoneRest } = z;
+        return {
+          ...withImages(zoneRest),
+          groups,
+          groupCount,
+        };
+      });
       // 扁平 groups：相容公告等舊客戶端
       const groups = zones.flatMap((z) => z.groups);
       return { ...area, zones, groups };

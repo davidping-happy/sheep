@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { FitRemoteImage } from '../components/FitRemoteImage';
 import { ImageGallery } from '../components/ImageGallery';
@@ -53,11 +54,13 @@ export default function ZoneDetailScreen({ route, navigation }: Props) {
     }
   }, [id]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
-  if (loading) {
+  if (loading && !zone) {
     return (
       <View style={styles.center}>
         <ActivityIndicator />
