@@ -30,7 +30,7 @@ const ANON_DISPLAY = '一位弟兄姊妹';
 /**
  * 7. 禱告代禱牆 — 隱私與內容審核為第一優先 (§6.2 / 階段三)。
  *  - 預設 PRIVATE（僅作者＋代禱／牧區同工）
- *  - GROUP：須為小組成員；PUBLIC：一般內容直接上牆，敏感／危機另審
+ *  - GROUP：須為小組成員；PUBLIC：發布前人工審核
  *  - 匿名貼文真實身份加密另表；危機內容不公開並稽核通報
  */
 @Injectable()
@@ -67,15 +67,14 @@ export class PrayerService {
       sharedGroupId = dto.sharedGroupId;
     }
 
-    // 公開：一般內容直接上牆；涉及第三人／未成年仍進審核；危機類自動標記不公開
-    let moderationStatus = ModerationStatus.APPROVED;
+    // 公開：發布前人工審核；私人／小組直接可用；危機類自動標記不公開
+    let moderationStatus: ModerationStatus;
     if (crisis) {
       moderationStatus = ModerationStatus.AUTO_FLAGGED;
-    } else if (
-      visibility === Visibility.PUBLIC &&
-      sensitiveCategory !== SensitiveCategory.NONE
-    ) {
+    } else if (visibility === Visibility.PUBLIC) {
       moderationStatus = ModerationStatus.PENDING;
+    } else {
+      moderationStatus = ModerationStatus.APPROVED;
     }
 
     const request = await this.prisma.prayerRequest.create({

@@ -96,14 +96,14 @@ export default function PrayerScreen() {
       });
       setContent('');
       if (created.moderationStatus === 'PENDING') {
-        setInfo('已送出，內容需同工審核後才會顯示給其他人。');
+        setInfo('已送出，公開內容需同工於後台審核後才會顯示給其他人。');
       } else if (created.moderationStatus === 'AUTO_FLAGGED') {
         setInfo('已標記需關懷同工處理，不會公開曝光。');
       } else {
         setInfo(
           visibility === 'PRIVATE'
             ? '已發布（私人：僅你與代禱同工可見）。'
-            : '已公開發布。',
+            : '已發布。',
         );
       }
       await load();
@@ -187,7 +187,7 @@ export default function PrayerScreen() {
               <Text
                 style={[styles.chipText, visibility === v && styles.chipTextOn]}
               >
-                {v === 'PRIVATE' ? '私人' : '公開'}
+                {v === 'PRIVATE' ? '私人' : '公開（需審核）'}
               </Text>
             </Pressable>
           ))}
@@ -233,7 +233,9 @@ export default function PrayerScreen() {
               </Text>
               <Text style={styles.badge}>{visLabel(item.visibility)}</Text>
               {item.moderationStatus !== 'APPROVED' ? (
-                <Text style={styles.badgeWarn}>{item.moderationStatus}</Text>
+                <Text style={styles.badgeWarn}>
+                  {statusLabel(item.moderationStatus)}
+                </Text>
               ) : null}
               {item.escalated ? (
                 <Text style={styles.badgeDanger}>關懷中</Text>
@@ -286,6 +288,13 @@ function visLabel(v: string) {
   if (v === 'PRIVATE') return '私人';
   if (v === 'GROUP') return '小組';
   return '公開';
+}
+
+function statusLabel(s: string) {
+  if (s === 'PENDING') return '審核中';
+  if (s === 'REJECTED') return '已退回';
+  if (s === 'AUTO_FLAGGED') return '關懷處理中';
+  return s;
 }
 
 const styles = StyleSheet.create({

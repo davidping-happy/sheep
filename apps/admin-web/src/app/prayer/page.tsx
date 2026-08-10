@@ -192,7 +192,7 @@ export default function PrayerModerationPage() {
       </div>
 
       <p className="muted">
-        私人代禱只給作者與代禱同工看，會直接進入列表（不會出現在待審）。請用下方篩選查看。此頁是「代禱牆」，不是「課程活動報名」。
+        公開代禱送出後進入「待審」，同工核准後才會顯示給其他人。私人代禱僅作者與代禱同工可見，直接進列表。此頁是「代禱牆」，不是「課程活動報名」。
       </p>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '12px 0' }}>
