@@ -126,6 +126,27 @@ export class EventsService {
     });
   }
 
+  /** 後台：所有待審核的取消報名申請 */
+  listCancelPending() {
+    return this.prisma.eventRegistration.findMany({
+      where: { status: RegistrationStatus.CANCEL_PENDING },
+      include: {
+        event: {
+          select: { id: true, title: true, startAt: true, location: true },
+        },
+        user: {
+          select: {
+            id: true,
+            displayName: true,
+            phone: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { updatedAt: 'asc' },
+    });
+  }
+
   async register(user: AuthUser, eventId: string, dto: RegisterEventDto) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },

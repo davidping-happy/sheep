@@ -51,9 +51,32 @@ function toLocalInputValue(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+interface CancelPendingRow {
+  id: string;
+  eventId: string;
+  status: string;
+  registrantName: string | null;
+  registrantGroup: string | null;
+  registrantPhone: string | null;
+  updatedAt: string;
+  event: {
+    id: string;
+    title: string;
+    startAt: string;
+    location: string | null;
+  };
+  user: {
+    id: string;
+    displayName: string;
+    phone: string | null;
+    email: string | null;
+  };
+}
+
 export default function EventsPage() {
   const auth = useAdminAuth();
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [cancelPending, setCancelPending] = useState<CancelPendingRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -82,8 +105,12 @@ export default function EventsPage() {
     setLoading(true);
     setError('');
     try {
-      const data = await apiFetch<EventItem[]>('/events', { token: jwt });
+      const [data, pending] = await Promise.all([
+        apiFetch<EventItem[]>('/events', { token: jwt }),
+        apiFetch<CancelPendingRow[]>('/events/cancel-pending', { token: jwt }),
+      ]);
       setEvents(data);
+      setCancelPending(pending);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '載入活動失敗');
     } finally {
@@ -235,18 +262,20 @@ export default function EventsPage() {
   }
 
   async function decideCancel(
+    eventId: string,
     registrationId: string,
     action: 'approve' | 'reject',
   ) {
-    if (!auth.token || !selectedId) return;
+    if (!auth.token) return;
     setError('');
     try {
       const path =
         action === 'approve'
-          ? `/events/${selectedId}/registrations/${registrationId}/approve-cancel`
-          : `/events/${selectedId}/registrations/${registrationId}/reject-cancel`;
+          ? `/events/${eventId}/registrations/${registrationId}/approve-cancel`
+          : `/events/${eventId}/registrations/${registrationId}/reject-cancel`;
       await apiFetch(path, { method: 'POST', token: auth.token });
-      await openRoster(selectedId);
+      await loadEvents(auth.token);
+      if (selectedId === eventId) await openRoster(eventId);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '處理取消申請失敗');
     }
@@ -305,10 +334,89 @@ export default function EventsPage() {
       </div>
       <p className="muted">
         建立活動、查看報名名單、審核取消申請、產生現場動態簽到碼。查看名單會寫入稽核紀錄。
-        名額額滿時 App 會提示無法報名；會友取消報名須於此核准後才生效。
+        名額額滿時 App 會提示無法報名；會友取消報名會出現在下方「待審核取消申請」，核准後才生效。
       </p>
 
       {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
+
+      <div className="card" style={{ borderColor: cancelPending.length ? '#d97706' : undefined }}>
+        <h3 style={{ color: cancelPending.length ? '#92400e' : undefined }}>
+          待審核取消申請 ({cancelPending.length})
+        </h3>
+        {cancelPending.length === 0 ? (
+          <p className="muted">目前沒有取消申請。</p>
+        ) : (
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>活動</th>
+                <th style={thStyle}>報名者</th>
+                <th style={thStyle}>聯絡</th>
+                <th style={thStyle}>申請時間</th>
+                <th style={thStyle}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cancelPending.map((row) => (
+                <tr key={row.id}>
+                  <td style={tdStyle}>
+                    <div>{row.event.title}</div>
+                    <div className="muted" style={{ fontSize: 12 }}>
+                      {new Date(row.event.startAt).toLocaleString()}
+                      {row.event.location ? ` · ${row.event.location}` : ''}
+                    </div>
+                  </td>
+                  <td style={tdStyle}>
+                    {row.registrantName || row.user.displayName}
+                    {row.registrantGroup ? (
+                      <div className="muted" style={{ fontSize: 12 }}>
+                        小組：{row.registrantGroup}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td style={tdStyle}>
+                    {row.registrantPhone || row.user.phone || '—'}
+                    {row.user.email ? (
+                      <div className="muted" style={{ fontSize: 12 }}>
+                        {row.user.email}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td style={tdStyle}>
+                    {new Date(row.updatedAt).toLocaleString()}
+                  </td>
+                  <td style={tdStyle}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button
+                        style={primaryBtnInline}
+                        onClick={() =>
+                          decideCancel(row.eventId, row.id, 'approve')
+                        }
+                      >
+                        核准取消
+                      </button>
+                      <button
+                        style={ghostBtn}
+                        onClick={() =>
+                          decideCancel(row.eventId, row.id, 'reject')
+                        }
+                      >
+                        駁回
+                      </button>
+                      <button
+                        style={ghostBtn}
+                        onClick={() => openRoster(row.eventId)}
+                      >
+                        查看名單
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       <form className="card" onSubmit={handleCreate}>
         <h3>{editingId ? '編輯活動' : '建立活動'}</h3>
@@ -421,6 +529,18 @@ export default function EventsPage() {
                         {ev.requiresGuardianConsent ? (
                           <span className="badge" style={{ marginLeft: 6 }}>
                             兒少
+                          </span>
+                        ) : null}
+                        {cancelPending.some((p) => p.eventId === ev.id) ? (
+                          <span
+                            className="badge"
+                            style={{
+                              marginLeft: 6,
+                              background: '#fef3c7',
+                              color: '#92400e',
+                            }}
+                          >
+                            有取消申請
                           </span>
                         ) : null}
                         {(ev.imageUrls?.length ?? 0) > 0 ? (
@@ -542,13 +662,17 @@ export default function EventsPage() {
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <button
                             style={primaryBtnInline}
-                            onClick={() => decideCancel(row.id, 'approve')}
+                            onClick={() =>
+                              decideCancel(selectedId!, row.id, 'approve')
+                            }
                           >
                             核准取消
                           </button>
                           <button
                             style={ghostBtn}
-                            onClick={() => decideCancel(row.id, 'reject')}
+                            onClick={() =>
+                              decideCancel(selectedId!, row.id, 'reject')
+                            }
                           >
                             駁回
                           </button>

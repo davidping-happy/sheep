@@ -64,6 +64,13 @@ export class EventsController {
     return this.service.myRegistrations(userId);
   }
 
+  /** 待審核取消報名（後台首屏顯示，勿藏在名單內） */
+  @Roles(Role.STAFF)
+  @Get('cancel-pending')
+  cancelPending() {
+    return this.service.listCancelPending();
+  }
+
   @Post(':id/register')
   register(
     @CurrentUser() user: AuthUser,
