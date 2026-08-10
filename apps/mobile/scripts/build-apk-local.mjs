@@ -46,10 +46,23 @@ console.log('GRADLE_USER_HOME=', gradleHome);
 const easJson = JSON.parse(
   fs.readFileSync(path.join(projectDir, 'eas.json'), 'utf8'),
 );
-const apiBase =
-  process.env.EXPO_PUBLIC_API_BASE ||
-  easJson.build?.preview?.env?.EXPO_PUBLIC_API_BASE;
-if (apiBase) process.env.EXPO_PUBLIC_API_BASE = apiBase;
+// Always prefer this project's eas.json — never inherit ambient EXPO_PUBLIC_*
+// from the shell (that previously baked youngadult-api into churchsheep APK).
+const apiBase = easJson.build?.preview?.env?.EXPO_PUBLIC_API_BASE;
+if (!apiBase) {
+  console.error('eas.json preview.env.EXPO_PUBLIC_API_BASE is missing');
+  process.exit(1);
+}
+process.env.EXPO_PUBLIC_API_BASE = apiBase;
+console.log('EXPO_PUBLIC_API_BASE=', apiBase);
+
+// Write .env so Metro/Expo embed the correct host even if Gradle daemon
+// was previously started with another project's EXPO_PUBLIC_* env.
+fs.writeFileSync(
+  path.join(projectDir, '.env'),
+  `EXPO_PUBLIC_API_BASE=${apiBase}\n`,
+  'utf8',
+);
 
 if (!fs.existsSync(credPath)) {
   run('node', ['scripts/download-android-credentials.mjs']);
@@ -141,6 +154,8 @@ gradle = gradle.replace(
 fs.writeFileSync(buildGradle, gradle);
 
 const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
+// Stop daemons so they cannot reuse another project's EXPO_PUBLIC_* env
+run(gradlew, ['--stop'], { cwd: androidDir });
 run(gradlew, ['assembleRelease'], { cwd: androidDir });
 
 const apkDir = path.join(androidDir, 'app', 'build', 'outputs', 'apk', 'release');

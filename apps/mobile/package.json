@@ -1,6 +1,6 @@
 {
   "name": "@churchsheep/mobile",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Cheng Er pastoral area mobile app ? React Native (Expo)",
   "private": true,
   "main": "index.ts",

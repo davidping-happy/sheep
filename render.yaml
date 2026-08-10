@@ -29,9 +29,9 @@ services:
           name: churchsheep-db
           property: connectionString
       - key: APK_MIRROR_URL
-        value: https://github.com/davidping-happy/sheep/releases/download/v1.1.7-preview/churchsheep-1.1.7.apk
+        value: https://github.com/davidping-happy/sheep/releases/download/v1.1.8-preview/churchsheep-1.1.8.apk
       - key: APK_FILE_NAME
-        value: churchsheep-1.1.7.apk
+        value: churchsheep-1.1.8.apk
       - key: CORS_ORIGINS
         value: "http://localhost:3001,http://127.0.0.1:3001,http://localhost:8081,http://127.0.0.1:8081,https://churchsheep-admin.onrender.com"
       - key: JWT_ACCESS_SECRET
@@ -71,8 +71,8 @@ services:
       - key: EXPO_PUBLIC_API_BASE
         value: https://churchsheep-api.onrender.com/api
       - key: APK_MIRROR_URL
-        value: https://github.com/davidping-happy/sheep/releases/download/v1.1.7-preview/churchsheep-1.1.7.apk
+        value: https://github.com/davidping-happy/sheep/releases/download/v1.1.8-preview/churchsheep-1.1.8.apk
       - key: APK_FILE_NAME
-        value: churchsheep-1.1.7.apk
+        value: churchsheep-1.1.8.apk
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"

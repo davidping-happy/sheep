@@ -15,12 +15,14 @@ https://churchsheep-api.onrender.com/downloads/churchsheep-latest.apk
 
 ### 備用
 
-- GitHub：https://github.com/davidping-happy/sheep/releases/download/v1.1.7-preview/churchsheep-1.1.7.apk
+- GitHub：https://github.com/davidping-happy/sheep/releases/download/v1.1.8-preview/churchsheep-1.1.8.apk
+
+> 1.1.7 有誤連社青 API 的問題，請改裝 **1.1.8**。
 
 ## 短訊範本
 
 ```
-【成二牧區 App 1.1.7】
+【成二牧區 App 1.1.8】
 請用 Chrome 打開（勿用 LINE）：
 https://churchsheep-api.onrender.com/downloads/churchsheep-latest.apk
 下載後覆蓋安裝。

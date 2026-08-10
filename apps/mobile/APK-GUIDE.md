@@ -96,7 +96,7 @@ npm run apk:status
 
 請改用 GitHub Release：
 
-https://github.com/davidping-happy/sheep/releases/download/v1.1.7-preview/churchsheep-1.1.7.apk
+https://github.com/davidping-happy/sheep/releases/download/v1.1.8-preview/churchsheep-1.1.8.apk
 
 （新版出包後：下載 APK → `gh release create` 上傳，或見 [TEST-LINKS.md](./TEST-LINKS.md)）
 

@@ -5,8 +5,9 @@ import * as SecureStore from 'expo-secure-store';
 /**
  * API 位址解析順序：
  * 1. App 內「伺服器連線設定」手動填入（打包後仍可改，不必重新建置 APK）
- * 2. 建置時的 EXPO_PUBLIC_API_BASE（eas.json / .env）
- * 3. app.json 的 extra.apiBase
+ * 2. app.json / app.config 的 extra.apiBase（各牧區專案固定，避免本機建置時
+ *    環境變數互相污染，例如成二 APK 誤連社青 API）
+ * 3. 建置時的 EXPO_PUBLIC_API_BASE（eas.json / .env）
  * 4. 雲端預設 https://churchsheep-api.onrender.com/api
  */
 const OVERRIDE_KEY = 'api_base_override';
@@ -16,12 +17,11 @@ let cached: string | null = null;
 let memoryOverride: string | null = null;
 
 function buildTimeBase(): string {
+  const fromExtra = Constants.expoConfig?.extra?.apiBase as string | undefined;
+  if (fromExtra) return fromExtra;
   const fromEnv = process.env.EXPO_PUBLIC_API_BASE;
   if (fromEnv) return fromEnv;
-  return (
-    (Constants.expoConfig?.extra?.apiBase as string | undefined) ??
-    CLOUD_API_BASE
-  );
+  return CLOUD_API_BASE;
 }
 
 /** 容錯：允許只貼網域，自動補上 https 與 /api */
