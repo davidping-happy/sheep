@@ -50,6 +50,7 @@ model User {
   eventCheckins      EventCheckin[]
   prayerRequests     PrayerRequest[]
   prayerResponses    PrayerResponse[]
+  prayerComments     PrayerComment[]
   devices            Device[]
   refreshTokens      RefreshToken[]
   auditLogs          AuditLog[]
@@ -293,6 +294,7 @@ model PrayerRequest {
   updatedAt       DateTime @updatedAt
 
   responses PrayerResponse[]
+  comments  PrayerComment[]
   reports   PrayerReport[]
   anonymity PrayerAnonymityMap?
 
@@ -325,6 +327,22 @@ model PrayerResponse {
 
   @@unique([prayerRequestId, userId])
   @@map("prayer_responses")
+}
+
+// 代禱事項底下的回應留言（彼此鼓勵）。可見範圍跟隨所屬代禱事項。
+model PrayerComment {
+  id              String        @id @default(uuid())
+  prayerRequest   PrayerRequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade)
+  prayerRequestId String
+  author          User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId        String
+  content         String
+  takenDownAt     DateTime?     // 作者自刪或同工下架
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([prayerRequestId, createdAt])
+  @@map("prayer_comments")
 }
 
 model PrayerReport {

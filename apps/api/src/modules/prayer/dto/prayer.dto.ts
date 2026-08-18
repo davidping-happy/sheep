@@ -7,7 +7,9 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
+  MinLength,
 } from 'class-validator';
 
 export class CreatePrayerDto {
@@ -40,6 +42,13 @@ export class ReportPrayerDto {
   @IsOptional()
   @IsString()
   reason?: string;
+}
+
+export class CreatePrayerCommentDto {
+  @IsString()
+  @MinLength(1, { message: '請輸入留言內容' })
+  @MaxLength(500, { message: '留言請控制在 500 字以內' })
+  content!: string;
 }
 
 export class RespondPrayerDto {

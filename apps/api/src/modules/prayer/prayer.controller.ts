@@ -14,6 +14,7 @@ import {
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { PrayerService } from './prayer.service';
 import {
+  CreatePrayerCommentDto,
   CreatePrayerDto,
   ModeratePrayerDto,
   ReportPrayerDto,
@@ -52,6 +53,36 @@ export class PrayerController {
   @Post('moderation/approve-stale-public')
   approveStale(@CurrentUser() user: AuthUser) {
     return this.service.approveStalePublicPending(user);
+  }
+
+  /** 後台檢視留言：不受審核狀態限制 */
+  @Roles(Role.STAFF)
+  @Get('moderation/:id/comments')
+  adminComments(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.adminComments(user, id);
+  }
+
+  /** 刪除留言：留言者本人或同工 */
+  @Post('comments/:commentId/delete')
+  deleteComment(
+    @CurrentUser() user: AuthUser,
+    @Param('commentId') commentId: string,
+  ) {
+    return this.service.deleteComment(user, commentId);
+  }
+
+  @Get(':id/comments')
+  comments(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.listComments(user, id);
+  }
+
+  @Post(':id/comments')
+  addComment(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: CreatePrayerCommentDto,
+  ) {
+    return this.service.addComment(user, id, dto);
   }
 
   @Roles(Role.STAFF)

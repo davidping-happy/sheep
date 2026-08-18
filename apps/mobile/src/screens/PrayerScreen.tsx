@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../auth/AuthContext';
+import { PrayerComments } from '../components/PrayerComments';
 import { api, ApiError } from '../lib/api';
 import { theme } from '../theme';
 
@@ -28,13 +29,14 @@ interface PrayerItem {
   escalated: boolean;
   responseCount?: number;
   iPrayed?: boolean;
+  commentCount?: number;
   createdAt: string;
 }
 
 type Visibility = 'PRIVATE' | 'PUBLIC';
 
 /**
- * 代禱牆：私人／公開（需審核）、我已代禱、檢舉。
+ * 代禱牆：私人／公開（需審核）、我已代禱、留言回應、檢舉。
  * （已取消「小組」「匿名」選項）
  */
 export default function PrayerScreen() {
@@ -277,6 +279,11 @@ export default function PrayerScreen() {
                 ) : null}
               </View>
             </View>
+            <PrayerComments
+              prayerId={item.id}
+              count={item.commentCount ?? 0}
+              onError={handleAuthError}
+            />
           </View>
         )}
       />

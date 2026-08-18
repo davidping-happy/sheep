@@ -16,6 +16,7 @@ import { FieldEncryptionService } from '../../common/crypto/field-encryption.ser
 import { AuditService } from '../../common/audit/audit.service';
 import { AuthUser } from '../../auth/decorators/current-user.decorator';
 import {
+  CreatePrayerCommentDto,
   CreatePrayerDto,
   ModeratePrayerDto,
   RespondPrayerDto,
@@ -117,7 +118,11 @@ export class PrayerService {
       });
     }
 
-    return this.toPublicView(request, user, { responseCount: 0, iPrayed: false });
+    return this.toPublicView(request, user, {
+      responseCount: 0,
+      iPrayed: false,
+      commentCount: 0,
+    });
   }
 
   /** 依可見範圍與審核狀態回傳可見清單 */
@@ -160,7 +165,12 @@ export class PrayerService {
         ],
       },
       include: {
-        _count: { select: { responses: true } },
+        _count: {
+          select: {
+            responses: true,
+            comments: { where: { takenDownAt: null } },
+          },
+        },
         responses: {
           where: { userId: user.id },
           select: { id: true },
@@ -174,21 +184,29 @@ export class PrayerService {
       this.toPublicView(r, user, {
         responseCount: r._count.responses,
         iPrayed: r.responses.length > 0,
+        commentCount: r._count.comments,
       }),
     );
   }
 
   async moderationQueue(user: AuthUser) {
     this.assertModerator(user);
-    return this.prisma.prayerRequest.findMany({
+    const rows = await this.prisma.prayerRequest.findMany({
       where: {
         takenDownAt: null,
         moderationStatus: {
           in: [ModerationStatus.PENDING, ModerationStatus.AUTO_FLAGGED],
         },
       },
+      include: {
+        _count: { select: { comments: { where: { takenDownAt: null } } } },
+      },
       orderBy: [{ escalated: 'desc' }, { createdAt: 'asc' }],
     });
+    return rows.map(({ _count, ...rest }) => ({
+      ...rest,
+      commentCount: _count.comments,
+    }));
   }
 
   /** 後台：近期代禱（含私人／公開／待審），方便同工關懷與刪除 */
@@ -198,16 +216,18 @@ export class PrayerService {
       where: { takenDownAt: null },
       include: {
         author: { select: { id: true, displayName: true, email: true } },
+        _count: { select: { comments: { where: { takenDownAt: null } } } },
       },
       orderBy: { createdAt: 'desc' },
       take: Math.min(Math.max(take, 1), 200),
     });
     return rows.map((r) => {
-      const { author, ...rest } = r;
+      const { author, _count, ...rest } = r;
       return {
         ...rest,
         authorDisplayName: author.displayName,
         authorEmail: author.email,
+        commentCount: _count.comments,
       };
     });
   }
@@ -296,6 +316,110 @@ export class PrayerService {
       },
       update: { showIdentity: dto.showIdentity ?? false },
     });
+  }
+
+  /** 代禱事項底下的留言（可見範圍與該則代禱相同） */
+  async listComments(user: AuthUser, prayerId: string) {
+    await this.assertCanView(user, prayerId);
+    return this.loadComments(prayerId, user);
+  }
+
+  async addComment(
+    user: AuthUser,
+    prayerId: string,
+    dto: CreatePrayerCommentDto,
+  ) {
+    await this.assertCanView(user, prayerId);
+    const content = dto.content.trim();
+    if (!content) throw new BadRequestException('請輸入留言內容');
+
+    const created = await this.prisma.prayerComment.create({
+      data: { prayerRequestId: prayerId, authorId: user.id, content },
+      include: { author: { select: { displayName: true } } },
+    });
+
+    // 留言若出現危機字眼，寫入稽核讓關懷同工能追蹤（內容仍照常顯示）
+    const sensitiveCategory = detectSensitiveCategory(content);
+    if (isCrisisCategory(sensitiveCategory)) {
+      this.logger.warn(
+        `[危機通報] prayerComment=${created.id} category=${sensitiveCategory}`,
+      );
+      await this.audit.log({
+        actorId: user.id,
+        action: 'PRAYER_COMMENT_CRISIS_ESCALATE',
+        targetType: 'PrayerComment',
+        targetId: created.id,
+        metadata: { category: sensitiveCategory, prayerRequestId: prayerId },
+      });
+    }
+
+    return this.toCommentView(created, user);
+  }
+
+  async deleteComment(user: AuthUser, commentId: string) {
+    const comment = await this.prisma.prayerComment.findUnique({
+      where: { id: commentId },
+    });
+    if (!comment || comment.takenDownAt) throw new NotFoundException();
+    const isCareStaff = user.role === Role.STAFF || user.role === Role.ADMIN;
+    if (comment.authorId !== user.id && !isCareStaff) {
+      throw new ForbiddenException('只能刪除自己的留言');
+    }
+    await this.prisma.prayerComment.update({
+      where: { id: commentId },
+      data: { takenDownAt: new Date() },
+    });
+    await this.audit.log({
+      actorId: user.id,
+      action: 'PRAYER_COMMENT_DELETE',
+      targetType: 'PrayerComment',
+      targetId: commentId,
+      metadata: {
+        prayerRequestId: comment.prayerRequestId,
+        byStaff: isCareStaff && comment.authorId !== user.id,
+      },
+    });
+    return { ok: true };
+  }
+
+  /** 後台：不受審核狀態限制，讓同工可檢視／清理任何一則代禱的留言 */
+  async adminComments(user: AuthUser, prayerId: string) {
+    this.assertModerator(user);
+    return this.loadComments(prayerId, user);
+  }
+
+  private async loadComments(prayerId: string, viewer: AuthUser) {
+    const rows = await this.prisma.prayerComment.findMany({
+      where: { prayerRequestId: prayerId, takenDownAt: null },
+      include: { author: { select: { displayName: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    return rows.map((r) => this.toCommentView(r, viewer));
+  }
+
+  private toCommentView(
+    row: {
+      id: string;
+      prayerRequestId: string;
+      authorId: string;
+      content: string;
+      createdAt: Date;
+      author: { displayName: string };
+    },
+    viewer: AuthUser,
+  ) {
+    const isOwner = row.authorId === viewer.id;
+    const isCareStaff =
+      viewer.role === Role.STAFF || viewer.role === Role.ADMIN;
+    return {
+      id: row.id,
+      prayerRequestId: row.prayerRequestId,
+      content: row.content,
+      createdAt: row.createdAt,
+      authorDisplay: isOwner ? '我' : row.author.displayName,
+      isOwner,
+      canDelete: isOwner || isCareStaff,
+    };
   }
 
   async report(user: AuthUser, id: string, reason?: string) {
@@ -391,7 +515,7 @@ export class PrayerService {
   private toPublicView(
     req: { authorId: string; isAnonymous: boolean } & Record<string, unknown>,
     viewer: AuthUser,
-    extra: { responseCount: number; iPrayed: boolean },
+    extra: { responseCount: number; iPrayed: boolean; commentCount: number },
   ) {
     const isOwner = req.authorId === viewer.id;
     const isCareStaff =
@@ -414,6 +538,7 @@ export class PrayerService {
       canTakeDown: isOwner || isCareStaff,
       responseCount: extra.responseCount,
       iPrayed: extra.iPrayed,
+      commentCount: extra.commentCount,
     };
   }
 }

@@ -16,6 +16,14 @@ interface PrayerItem {
   createdAt: string;
   authorDisplayName?: string;
   authorEmail?: string;
+  commentCount?: number;
+}
+
+interface PrayerCommentItem {
+  id: string;
+  content: string;
+  authorDisplay: string;
+  createdAt: string;
 }
 
 type Filter = 'ALL' | 'PRIVATE' | 'PUBLIC' | 'PENDING';
@@ -160,6 +168,7 @@ export default function PrayerModerationPage() {
     );
   }
 
+  const token = auth.token;
   const privateCount = recent.filter((p) => p.visibility === 'PRIVATE').length;
   const publicCount = recent.filter((p) => p.visibility === 'PUBLIC').length;
 
@@ -250,6 +259,7 @@ export default function PrayerModerationPage() {
           }
           onDelete={() => removeItem(item.id)}
           onReveal={item.isAnonymous ? () => reveal(item.id) : undefined}
+          token={token}
         />
       ))}
     </div>
@@ -263,6 +273,7 @@ function PrayerCard({
   onReject,
   onDelete,
   onReveal,
+  token,
 }: {
   item: PrayerItem;
   busyId: string | null;
@@ -270,6 +281,7 @@ function PrayerCard({
   onReject?: () => void;
   onDelete: () => void;
   onReveal?: () => void;
+  token: string;
 }) {
   return (
     <div className="card">
@@ -354,6 +366,110 @@ function PrayerCard({
           {new Date(item.createdAt).toLocaleString()}
         </span>
       </div>
+
+      <CommentModeration
+        prayerId={item.id}
+        count={item.commentCount ?? 0}
+        token={token}
+      />
+    </div>
+  );
+}
+
+/** 會友在此則代禱下的留言：同工可檢視與刪除不當內容 */
+function CommentModeration({
+  prayerId,
+  count,
+  token,
+}: {
+  prayerId: string;
+  count: number;
+  token: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<PrayerCommentItem[]>([]);
+  const [total, setTotal] = useState(count);
+  const [error, setError] = useState('');
+
+  async function load() {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await apiFetch<PrayerCommentItem[]>(
+        `/prayer/moderation/${prayerId}/comments`,
+        { token },
+      );
+      setItems(data);
+      setTotal(data.length);
+      setLoaded(true);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '載入留言失敗');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && !loaded) await load();
+  }
+
+  async function removeComment(id: string) {
+    if (!confirm('確定刪除這則留言？')) return;
+    setError('');
+    try {
+      await apiFetch(`/prayer/comments/${id}/delete`, {
+        method: 'POST',
+        token,
+      });
+      setItems((prev) => prev.filter((c) => c.id !== id));
+      setTotal((n) => Math.max(0, n - 1));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '刪除留言失敗');
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 12, borderTop: '1px solid #e5e7eb', paddingTop: 8 }}>
+      <button style={ghostBtn} onClick={toggle}>
+        {open ? '收合留言' : `留言（${total}）`}
+      </button>
+      {open ? (
+        <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
+          {loading ? <p className="muted">載入中…</p> : null}
+          {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
+          {!loading && items.length === 0 ? (
+            <p className="muted">目前沒有留言。</p>
+          ) : null}
+          {items.map((c) => (
+            <div
+              key={c.id}
+              style={{
+                background: '#f9fafb',
+                border: '1px solid #e5e7eb',
+                borderRadius: 8,
+                padding: '8px 10px',
+                display: 'flex',
+                gap: 12,
+                alignItems: 'flex-start',
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div className="muted" style={{ fontSize: 12 }}>
+                  {c.authorDisplay} · {new Date(c.createdAt).toLocaleString()}
+                </div>
+                <div style={{ lineHeight: 1.6 }}>{c.content}</div>
+              </div>
+              <button style={ghostBtn} onClick={() => removeComment(c.id)}>
+                刪除
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
