@@ -10,7 +10,11 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { DevotionsService } from './devotions.service';
-import { CreateDevotionDto, UpdateDevotionDto } from './dto/devotion.dto';
+import {
+  CreateDevotionCommentDto,
+  CreateDevotionDto,
+  UpdateDevotionDto,
+} from './dto/devotion.dto';
 
 @ApiTags('devotions')
 @ApiBearerAuth()
@@ -31,9 +35,48 @@ export class DevotionsController {
     return this.service.findMine(userId);
   }
 
+  /** 牧區動態牆（PUBLIC + 我所屬小組） */
+  @Get('feed')
+  findFeed(@CurrentUser('id') userId: string) {
+    return this.service.findFeed(userId);
+  }
+
   @Get('shared')
   findShared(@CurrentUser('id') userId: string) {
     return this.service.findSharedWithMe(userId);
+  }
+
+  @Get(':id/comments')
+  listComments(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.listComments(userId, id);
+  }
+
+  @Post(':id/comments')
+  addComment(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateDevotionCommentDto,
+  ) {
+    return this.service.addComment(userId, id, dto);
+  }
+
+  @Post(':id/like')
+  toggleLike(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.toggleLike(userId, id);
+  }
+
+  @Delete('comments/:commentId')
+  deleteComment(
+    @CurrentUser('id') userId: string,
+    @Param('commentId') commentId: string,
+  ) {
+    return this.service.deleteComment(userId, commentId);
   }
 
   @Get(':id')

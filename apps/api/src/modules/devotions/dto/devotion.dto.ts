@@ -6,10 +6,19 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 
 /** 靈修隨記內容上限（字元） */
 const CONTENT_MAX = 800;
+const COMMENT_MAX = 500;
+
+export class CreateDevotionCommentDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(COMMENT_MAX)
+  content!: string;
+}
 
 export class CreateDevotionDto {
   @IsDateString()

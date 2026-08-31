@@ -21,6 +21,7 @@ export type DevotionExportInput = {
   categoryLabel: string;
   scriptureRef?: string | null;
   content: string;
+  authorName?: string | null;
 };
 
 function brandName() {
@@ -50,10 +51,13 @@ export function buildDevotionPlainText(input: DevotionExportInput) {
     `日期：${datePart(input.noteDate)}`,
     `分類：${input.categoryLabel}`,
   ];
+  if (input.authorName?.trim()) {
+    lines.push(`作者：${input.authorName.trim()}`);
+  }
   if (input.scriptureRef?.trim()) {
     lines.push(`經文：${input.scriptureRef.trim()}`);
   }
-  lines.push('', input.content.trim());
+  lines.push('', input.content.trim(), '', '— 歡迎在 App 動態牆回應 —');
   return lines.join('\n');
 }
 

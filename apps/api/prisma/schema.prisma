@@ -51,6 +51,8 @@ model User {
   prayerRequests     PrayerRequest[]
   prayerResponses    PrayerResponse[]
   prayerComments     PrayerComment[]
+  devotionLikes      DevotionLike[]
+  devotionComments   DevotionComment[]
   devices            Device[]
   refreshTokens      RefreshToken[]
   auditLogs          AuditLog[]
@@ -90,9 +92,42 @@ model DevotionNote {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
+  likes     DevotionLike[]
+  comments  DevotionComment[]
+
   @@index([authorId, noteDate])
   @@index([authorId, category])
+  @@index([visibility, noteDate])
   @@map("devotion_notes")
+}
+
+/** 靈修隨記按讚（牧區公開／小組可見） */
+model DevotionLike {
+  id        String       @id @default(uuid())
+  note      DevotionNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  noteId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime     @default(now())
+
+  @@unique([noteId, userId])
+  @@index([noteId])
+  @@map("devotion_likes")
+}
+
+/** 靈修隨記留言（牧區公開／小組可見） */
+model DevotionComment {
+  id        String       @id @default(uuid())
+  note      DevotionNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  noteId    String
+  author    User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
+  content   String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([noteId, createdAt])
+  @@map("devotion_comments")
 }
 
 // ─────────────────────── 3. 靈修佳文分享 (CMS) ───────────────────────
