@@ -1,47 +1,25 @@
 /**
- * Render 啟動：先 migrate，失敗時 resolve／db push，最後一定啟動 API。
- * 避免 migration checksum／半套用狀態導致 Deploy 一直 Failed、App 卡死。
+ * Render 啟動：只啟動 API（立刻通過健康檢查）。
+ * Schema 同步改在 Nest bootstrap 後背景執行，避免 Deploy 因 migrate 過慢被判 Failed。
  */
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 
-function run(cmd, args) {
-  console.log(`> ${cmd} ${args.join(' ')}`);
-  return spawnSync(cmd, args, {
-    stdio: 'inherit',
-    shell: process.platform === 'win32',
-    env: process.env,
-  });
-}
+console.log('[start-render] node dist/main.js');
+const app = spawn('node', ['dist/main.js'], {
+  stdio: 'inherit',
+  shell: true,
+  env: process.env,
+});
 
-console.log('[start-render] prisma migrate deploy…');
-let migrate = run('npx', ['prisma', 'migrate', 'deploy']);
-
-if (migrate.status !== 0) {
-  console.warn(
-    '[start-render] migrate deploy failed — resolve devotion_social + db push fallback',
-  );
-  run('npx', [
-    'prisma',
-    'migrate',
-    'resolve',
-    '--rolled-back',
-    '20260831000000_devotion_social',
-  ]);
-  run('npx', [
-    'prisma',
-    'migrate',
-    'resolve',
-    '--applied',
-    '20260831000000_devotion_social',
-  ]);
-  const push = run('npx', ['prisma', 'db', 'push', '--skip-generate', '--accept-data-loss']);
-  if (push.status !== 0) {
-    console.warn(
-      '[start-render] db push also failed; starting API anyway (health / 既有功能優先)',
-    );
+app.on('exit', (code, signal) => {
+  if (signal) {
+    console.error(`[start-render] API killed by signal ${signal}`);
+    process.exit(1);
   }
-}
+  process.exit(code ?? 1);
+});
 
-console.log('[start-render] starting node dist/main.js…');
-const app = run('node', ['dist/main.js']);
-process.exit(app.status ?? 1);
+app.on('error', (err) => {
+  console.error('[start-render] failed to start API', err);
+  process.exit(1);
+});

@@ -15,9 +15,9 @@ services:
     plan: free
     rootDir: apps/api
     # 免費方案 build 常省略 devDependencies；必須 --include=dev 才能跑 tsc / prisma
-    # 勿在 build 下載大型 APK（易 OOM／逾時導致 Deploy failed）
+    # 勿在 build 下載大型 APK；啟動只要 node（migrate 改背景／bootstrap）
     buildCommand: npm install --legacy-peer-deps --include=dev && npx prisma generate && npm run build
-    startCommand: npm run start:render
+    startCommand: node dist/main.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
