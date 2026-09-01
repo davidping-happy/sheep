@@ -12,6 +12,9 @@ export class ApiError extends Error {
 
 type Tokens = { accessToken: string; refreshToken: string };
 
+/** 雲端免費方案喚醒較慢；逾時後讓畫面可重試，避免一直轉圈 */
+const DEFAULT_TIMEOUT_MS = 35_000;
+
 /**
  * API 呼叫封裝：自動帶入 access token，401 時嘗試以 refresh token 換發。
  * skipAuth=true 時不帶 token（登入／註冊用）。
@@ -23,14 +26,41 @@ export async function api<T>(
 ): Promise<T> {
   const accessToken = skipAuth ? null : await tokenStore.getAccess();
   const apiBase = await getApiBase();
-  const res = await fetch(`${apiBase}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...options.headers,
-    },
-  });
+  const controller = new AbortController();
+  const userSignal = options.signal;
+  const onAbort = () => controller.abort();
+  if (userSignal) {
+    if (userSignal.aborted) controller.abort();
+    else userSignal.addEventListener('abort', onAbort, { once: true });
+  }
+  const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`${apiBase}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...options.headers,
+      },
+    });
+  } catch (e) {
+    const aborted =
+      (e instanceof Error && e.name === 'AbortError') ||
+      controller.signal.aborted;
+    if (aborted) {
+      throw new ApiError(
+        0,
+        '連線逾時。雲端伺服器可能正在喚醒，請稍候約 1 分鐘後再下拉重試。',
+      );
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+    if (userSignal) userSignal.removeEventListener('abort', onAbort);
+  }
 
   if (res.status === 401 && !skipAuth) {
     const refreshed = await tryRefresh();

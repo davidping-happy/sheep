@@ -66,55 +66,71 @@ export class DevotionsService {
   }
 
   async findMine(userId: string) {
-    const notes = await this.prisma.devotionNote.findMany({
-      where: { authorId: userId },
-      orderBy: { noteDate: 'desc' },
-      include: {
-        author: { select: { id: true, displayName: true, avatarUrl: true } },
-        _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId }, select: { userId: true } },
-      },
-    });
-    return notes.map((n) =>
-      this.toPublic(n, userId, (n.likes?.length ?? 0) > 0),
-    );
+    try {
+      const notes = await this.prisma.devotionNote.findMany({
+        where: { authorId: userId },
+        orderBy: { noteDate: 'desc' },
+        include: {
+          author: { select: { id: true, displayName: true, avatarUrl: true } },
+          _count: { select: { likes: true, comments: true } },
+          likes: { where: { userId }, select: { userId: true } },
+        },
+      });
+      return notes.map((n) =>
+        this.toPublic(n, userId, (n.likes?.length ?? 0) > 0),
+      );
+    } catch {
+      // 尚未 migration 社群表時，仍回傳基本筆記，避免 App 整頁卡住
+      const notes = await this.prisma.devotionNote.findMany({
+        where: { authorId: userId },
+        orderBy: { noteDate: 'desc' },
+        include: {
+          author: { select: { id: true, displayName: true, avatarUrl: true } },
+        },
+      });
+      return notes.map((n) => this.toPublic(n as NoteRow, userId, false));
+    }
   }
 
   /**
    * 牧區動態牆：PUBLIC 筆記 + 我所屬小組的 GROUP 筆記（含自己）
    */
   async findFeed(userId: string) {
-    const memberships = await this.prisma.groupMember.findMany({
-      where: { userId },
-      select: { groupId: true },
-    });
-    const groupIds = memberships.map((m) => m.groupId);
+    try {
+      const memberships = await this.prisma.groupMember.findMany({
+        where: { userId },
+        select: { groupId: true },
+      });
+      const groupIds = memberships.map((m) => m.groupId);
 
-    const notes = await this.prisma.devotionNote.findMany({
-      where: {
-        OR: [
-          { visibility: Visibility.PUBLIC },
-          ...(groupIds.length
-            ? [
-                {
-                  visibility: Visibility.GROUP,
-                  sharedGroupId: { in: groupIds },
-                },
-              ]
-            : []),
-        ],
-      },
-      orderBy: [{ noteDate: 'desc' }, { createdAt: 'desc' }],
-      take: 50,
-      include: {
-        author: { select: { id: true, displayName: true, avatarUrl: true } },
-        _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId }, select: { userId: true } },
-      },
-    });
-    return notes.map((n) =>
-      this.toPublic(n, userId, (n.likes?.length ?? 0) > 0),
-    );
+      const notes = await this.prisma.devotionNote.findMany({
+        where: {
+          OR: [
+            { visibility: Visibility.PUBLIC },
+            ...(groupIds.length
+              ? [
+                  {
+                    visibility: Visibility.GROUP,
+                    sharedGroupId: { in: groupIds },
+                  },
+                ]
+              : []),
+          ],
+        },
+        orderBy: [{ noteDate: 'desc' }, { createdAt: 'desc' }],
+        take: 50,
+        include: {
+          author: { select: { id: true, displayName: true, avatarUrl: true } },
+          _count: { select: { likes: true, comments: true } },
+          likes: { where: { userId }, select: { userId: true } },
+        },
+      });
+      return notes.map((n) =>
+        this.toPublic(n, userId, (n.likes?.length ?? 0) > 0),
+      );
+    } catch {
+      return [];
+    }
   }
 
   async findOne(userId: string, id: string) {
