@@ -10,7 +10,7 @@
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
-    "start:render": "npx prisma migrate deploy && node dist/main.js",
+    "start:render": "node scripts/start-render.mjs",
     "lint": "eslint \"src/**/*.ts\" --fix",
     "test": "jest",
     "prisma:generate": "prisma generate",
