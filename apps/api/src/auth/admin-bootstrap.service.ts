@@ -18,6 +18,18 @@ export class AdminBootstrapService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    try {
+      await this.bootstrapAdmin();
+    } catch (err) {
+      this.logger.warn(
+        `管理員自動建立略過（資料庫可能尚未就緒）: ${
+          err instanceof Error ? err.message : err
+        }`,
+      );
+    }
+  }
+
+  private async bootstrapAdmin() {
     const email = 'admin@church.local';
     const password = process.env.SEED_ADMIN_PASSWORD?.trim();
     if (!password) {

@@ -99,4 +99,10 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
   Logger.log(`API 已啟動於 http://0.0.0.0:${port}/api`, 'Bootstrap');
 }
-bootstrap();
+bootstrap().catch((err) => {
+  Logger.error(
+    err instanceof Error ? err.stack ?? err.message : String(err),
+    'Bootstrap',
+  );
+  process.exit(1);
+});
