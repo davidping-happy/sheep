@@ -12,6 +12,7 @@ import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../common/audit/audit.service';
+import { SchemaSyncBootstrap } from '../common/schema-sync.bootstrap';
 import { LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
 
 /**
@@ -29,31 +30,50 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly audit: AuditService,
+    private readonly schemaSync: SchemaSyncBootstrap,
   ) {}
 
   async register(dto: RegisterDto) {
     await this.ensureDb();
-    const exists = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
-    if (exists) throw new ConflictException('Email 已被註冊');
+    await this.schemaSync.ensureSchema();
+    try {
+      const exists = await this.prisma.user.findUnique({
+        where: { email: dto.email },
+      });
+      if (exists) throw new ConflictException('Email 已被註冊');
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        passwordHash: await bcrypt.hash(dto.password, 12),
-        displayName: dto.displayName,
-        isMinor: dto.isMinor ?? false,
-        guardianName: dto.guardianName,
-        guardianPhone: dto.guardianPhone,
-        consentAt: new Date(),
-      },
-    });
-    return this.issueTokens(user.id, user.email, user.role);
+      const user = await this.prisma.user.create({
+        data: {
+          email: dto.email,
+          passwordHash: await bcrypt.hash(dto.password, 12),
+          displayName: dto.displayName,
+          isMinor: dto.isMinor ?? false,
+          guardianName: dto.guardianName,
+          guardianPhone: dto.guardianPhone,
+          consentAt: new Date(),
+        },
+      });
+      return await this.issueTokens(user.id, user.email, user.role);
+    } catch (err) {
+      if (
+        err instanceof ConflictException ||
+        err instanceof ServiceUnavailableException ||
+        err instanceof UnauthorizedException
+      ) {
+        throw err;
+      }
+      this.logger.error(
+        `register error: ${err instanceof Error ? err.message : err}`,
+      );
+      throw new ServiceUnavailableException(
+        '註冊失敗：資料庫可能仍在初始化，請等 1 分鐘後再試一次',
+      );
+    }
   }
 
   async login(dto: LoginDto, ip?: string) {
     await this.ensureDb();
+    await this.schemaSync.ensureSchema();
     let user;
     try {
       user = await this.prisma.user.findUnique({
