@@ -65,8 +65,14 @@ export class AuthService {
       this.logger.error(
         `register error: ${err instanceof Error ? err.message : err}`,
       );
+      const detail =
+        err instanceof Error && err.message
+          ? err.message.slice(0, 160)
+          : '';
       throw new ServiceUnavailableException(
-        '註冊失敗：資料庫可能仍在初始化，請等 1 分鐘後再試一次',
+        detail
+          ? `註冊失敗：${detail}`
+          : '註冊失敗：資料庫可能仍在初始化，請等 1 分鐘後再試一次',
       );
     }
   }
