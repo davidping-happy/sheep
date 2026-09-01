@@ -150,20 +150,12 @@ export class AuthService {
   }
 
   private async ensureDb() {
-    try {
-      await this.prisma.$queryRaw`SELECT 1`;
-    } catch {
-      try {
-        await this.prisma.$connect();
-        await this.prisma.$queryRaw`SELECT 1`;
-      } catch (err) {
-        this.logger.error(
-          `DB unavailable: ${err instanceof Error ? err.message : err}`,
-        );
-        throw new ServiceUnavailableException(
-          '資料庫暫時無法連線，請稍後再試（請到 Render 確認 Postgres／DATABASE_URL）',
-        );
-      }
+    const ok = await this.prisma.waitForDb(12, 2500);
+    if (!ok) {
+      this.logger.error('DB unavailable after retries');
+      throw new ServiceUnavailableException(
+        '資料庫暫時無法連線（Neon 可能正在喚醒）。請等 30 秒再試；若持續失敗，到 Render 確認 DATABASE_URL 是否為 Neon 連線字串。',
+      );
     }
   }
 
