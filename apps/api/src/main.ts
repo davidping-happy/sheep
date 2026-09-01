@@ -7,7 +7,17 @@ import helmet from 'helmet';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
+/** Render／Neon 等托管 Postgres 常需 SSL；缺參數時補上避免連線失敗 */
+function ensureDbSsl() {
+  const url = process.env.DATABASE_URL;
+  if (!url || url.includes('sslmode=')) return;
+  if (!url.startsWith('postgres')) return;
+  process.env.DATABASE_URL =
+    url + (url.includes('?') ? '&' : '?') + 'sslmode=require';
+}
+
 async function bootstrap() {
+  ensureDbSsl();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
 

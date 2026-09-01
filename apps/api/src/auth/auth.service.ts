@@ -1,6 +1,8 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -14,15 +16,14 @@ import { LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
 
 /**
  * 身份驗證 (§四.3)：
- *  - 密碼以 argon2 雜湊（不自製加密）
+ *  - 密碼以 bcrypt 雜湊
  *  - 簽發短效期 access token + refresh token
  *  - refresh token 以雜湊存 DB，可撤銷（登出/輪替）
- *
- * TODO(正式上線)：改接 OAuth2/OIDC Provider（如 Keycloak / Auth0 / 自建），
- * 此處為自架帳密骨架，符合「短效期 token + refresh + 可撤銷」的要求。
  */
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
@@ -31,6 +32,7 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    await this.ensureDb();
     const exists = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -44,16 +46,27 @@ export class AuthService {
         isMinor: dto.isMinor ?? false,
         guardianName: dto.guardianName,
         guardianPhone: dto.guardianPhone,
-        consentAt: new Date(), // 註冊即記錄告知同意時間
+        consentAt: new Date(),
       },
     });
     return this.issueTokens(user.id, user.email, user.role);
   }
 
   async login(dto: LoginDto, ip?: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
+    await this.ensureDb();
+    let user;
+    try {
+      user = await this.prisma.user.findUnique({
+        where: { email: dto.email },
+      });
+    } catch (err) {
+      this.logger.error(
+        `login DB error: ${err instanceof Error ? err.message : err}`,
+      );
+      throw new ServiceUnavailableException(
+        '資料庫暫時無法連線，請稍後再試（請到 Render 確認 Postgres／DATABASE_URL）',
+      );
+    }
     // 帳號枚舉防護：不論帳號是否存在都做一次雜湊比對成本 (§四.7)
     const ok =
       user && (await bcrypt.compare(dto.password, user.passwordHash));
@@ -61,18 +74,34 @@ export class AuthService {
       throw new UnauthorizedException('帳號或密碼錯誤');
     }
 
-    // TODO: 後台角色 (STAFF/ADMIN) 若 twoFactorEnabled 則驗證 dto.totp
-    await this.audit.log({
-      actorId: user.id,
-      action: 'AUTH_LOGIN',
-      targetType: 'User',
-      targetId: user.id,
-      ip,
-    });
-    return this.issueTokens(user.id, user.email, user.role);
+    try {
+      await this.audit.log({
+        actorId: user.id,
+        action: 'AUTH_LOGIN',
+        targetType: 'User',
+        targetId: user.id,
+        ip,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `audit log skipped: ${err instanceof Error ? err.message : err}`,
+      );
+    }
+    try {
+      return await this.issueTokens(user.id, user.email, user.role);
+    } catch (err) {
+      this.logger.error(
+        `issueTokens error: ${err instanceof Error ? err.message : err}`,
+      );
+      if (err instanceof ServiceUnavailableException) throw err;
+      throw new ServiceUnavailableException(
+        '登入服務暫時異常，請確認資料庫與 JWT 環境變數後重試',
+      );
+    }
   }
 
   async refresh(dto: RefreshDto) {
+    await this.ensureDb();
     const tokenHash = this.hashToken(dto.refreshToken);
     const record = await this.prisma.refreshToken.findUnique({
       where: { tokenHash },
@@ -81,7 +110,6 @@ export class AuthService {
     if (!record || record.revokedAt || record.expiresAt < new Date()) {
       throw new UnauthorizedException('Refresh token 無效');
     }
-    // 輪替：撤銷舊 token，簽發新的
     await this.prisma.refreshToken.update({
       where: { id: record.id },
       data: { revokedAt: new Date() },
@@ -101,14 +129,39 @@ export class AuthService {
     });
   }
 
+  private async ensureDb() {
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+    } catch {
+      try {
+        await this.prisma.$connect();
+        await this.prisma.$queryRaw`SELECT 1`;
+      } catch (err) {
+        this.logger.error(
+          `DB unavailable: ${err instanceof Error ? err.message : err}`,
+        );
+        throw new ServiceUnavailableException(
+          '資料庫暫時無法連線，請稍後再試（請到 Render 確認 Postgres／DATABASE_URL）',
+        );
+      }
+    }
+  }
+
   private async issueTokens(
     userId: string,
     email: string,
     role: string,
   ) {
+    const secret = this.config.get<string>('jwt.accessSecret');
+    if (!secret) {
+      this.logger.error('JWT_ACCESS_SECRET 未設定');
+      throw new ServiceUnavailableException(
+        '伺服器驗證金鑰未設定（JWT_ACCESS_SECRET），請到 Render Environment 檢查',
+      );
+    }
     const payload = { sub: userId, email, role };
     const accessToken = await this.jwt.signAsync(payload, {
-      secret: this.config.get('jwt.accessSecret'),
+      secret,
       expiresIn: this.config.get('jwt.accessTtl'),
     });
 
