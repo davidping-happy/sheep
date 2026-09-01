@@ -56,7 +56,7 @@ iPhone（Safari）：
 https://churchsheep-admin.onrender.com/app/
 
 Android APK：  
-https://github.com/davidping-happy/sheep/releases/download/v1.1.0-preview/churchsheep-1.1.0.apk
+https://github.com/davidping-happy/sheep/releases/download/v1.1.10-preview/churchsheep-1.1.10.apk
 
 舊版 APK 若連不上，到「更多 → 伺服器連線設定」貼：
 

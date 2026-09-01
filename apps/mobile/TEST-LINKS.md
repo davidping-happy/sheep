@@ -15,7 +15,7 @@ https://churchsheep-api.onrender.com/downloads/churchsheep-latest.apk
 
 ### 備用
 
-- GitHub：https://github.com/davidping-happy/sheep/releases/download/v1.1.9-preview/churchsheep-1.1.9.apk
+- GitHub：https://github.com/davidping-happy/sheep/releases/download/v1.1.10-preview/churchsheep-1.1.10.apk
 
 > 1.1.9 新增「代禱牆留言回應」，請更新到最新版。
 
