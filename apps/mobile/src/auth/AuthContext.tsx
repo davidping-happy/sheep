@@ -17,12 +17,13 @@ import {
 interface AuthState {
   ready: boolean;
   signedIn: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (account: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   register: (
     email: string,
     password: string,
     displayName: string,
+    phone: string,
   ) => Promise<void>;
 }
 
@@ -41,14 +42,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return tokenStore.onChange(setSignedIn);
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    await loginRequest(email, password);
+  const signIn = useCallback(async (account: string, password: string) => {
+    await loginRequest(account, password);
     setSignedIn(true);
   }, []);
 
   const register = useCallback(
-    async (email: string, password: string, displayName: string) => {
-      await registerRequest(email, password, displayName);
+    async (
+      email: string,
+      password: string,
+      displayName: string,
+      phone: string,
+    ) => {
+      await registerRequest(email, password, displayName, phone);
       setSignedIn(true);
     },
     [],

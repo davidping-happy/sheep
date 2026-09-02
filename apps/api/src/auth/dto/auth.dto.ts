@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class RegisterDto {
@@ -17,11 +18,15 @@ export class RegisterDto {
   @IsString()
   displayName!: string;
 
+  /** 手機（台灣 09xxxxxxxx），忘記密碼／帳號時收簡訊 */
+  @IsString()
+  @MinLength(9)
+  phone!: string;
+
   @IsOptional()
   @IsBoolean()
   isMinor?: boolean;
 
-  // 未成年須提供監護人資訊 (§四.8)
   @IsOptional()
   @IsString()
   guardianName?: string;
@@ -32,13 +37,20 @@ export class RegisterDto {
 }
 
 export class LoginDto {
+  /** 帳號：Email 或手機（與舊版 email 欄位相容） */
+  @ValidateIf((o: LoginDto) => !o.email)
+  @IsString()
+  @MinLength(3)
+  account?: string;
+
+  @IsOptional()
   @IsEmail()
-  email!: string;
+  email?: string;
 
   @IsString()
+  @MinLength(6)
   password!: string;
 
-  // 後台帳號 2FA 一次性密碼 (§四.3)
   @IsOptional()
   @IsString()
   totp?: string;
@@ -47,4 +59,37 @@ export class LoginDto {
 export class RefreshDto {
   @IsString()
   refreshToken!: string;
+}
+
+export class ForgotPasswordDto {
+  /** Email 或手機 */
+  @IsString()
+  @MinLength(3)
+  account!: string;
+}
+
+export class ResetPasswordDto {
+  /** Email 或手機 */
+  @IsString()
+  @MinLength(3)
+  account!: string;
+
+  @IsString()
+  @MinLength(4)
+  code!: string;
+
+  @IsString()
+  @MinLength(6)
+  newPassword!: string;
+}
+
+/** 忘記帳號：手機或顯示名稱 → Email／簡訊通知帳號 */
+export class HintAccountDto {
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  displayName?: string;
 }

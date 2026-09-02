@@ -55,9 +55,25 @@ model User {
   devotionComments   DevotionComment[]
   devices            Device[]
   refreshTokens      RefreshToken[]
+  passwordResets     PasswordReset[]
   auditLogs          AuditLog[]
 
+  @@index([phone])
   @@map("users")
+}
+
+// 忘記密碼：短效驗證碼（雜湊存放）
+model PasswordReset {
+  id        String    @id @default(uuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_resets")
 }
 
 // Refresh token 家族，登出/撤銷用 (§四.3)

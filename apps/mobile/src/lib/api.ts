@@ -107,10 +107,10 @@ async function tryRefresh(): Promise<boolean> {
   }
 }
 
-export async function loginRequest(email: string, password: string) {
+export async function loginRequest(account: string, password: string) {
   const data = await api<Tokens>(
     '/auth/login',
-    { method: 'POST', body: JSON.stringify({ email, password }) },
+    { method: 'POST', body: JSON.stringify({ account, password }) },
     true,
   );
   await tokenStore.save(data.accessToken, data.refreshToken);
@@ -121,12 +121,13 @@ export async function registerRequest(
   email: string,
   password: string,
   displayName: string,
+  phone: string,
 ) {
   const data = await api<Tokens>(
     '/auth/register',
     {
       method: 'POST',
-      body: JSON.stringify({ email, password, displayName }),
+      body: JSON.stringify({ email, password, displayName, phone }),
     },
     true,
   );

@@ -30,4 +30,7 @@ export default () => ({
     ttl: parseInt(process.env.THROTTLE_TTL ?? '60', 10),
     limit: parseInt(process.env.THROTTLE_LIMIT ?? '100', 10),
   },
+  app: {
+    brandName: process.env.BRAND_NAME ?? '成二牧區',
+  },
 });

@@ -16,17 +16,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../lib/api';
 import { theme } from '../theme';
+import ForgotAccessPanel from './ForgotAccessPanel';
 
 /**
- * 成二牧區登入 — Figma 溫馨家庭風（客廳主視覺＋水彩教會底圖）
+ * 成二牧區登入 — 帳號＋密碼（至少 6 字元）
  */
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { signIn, register } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('');
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -35,11 +37,16 @@ export default function LoginScreen() {
     setError('');
     setBusy(true);
     try {
+      if (password.length < 6) throw new Error('密碼至少 6 字元');
       if (mode === 'login') {
-        await signIn(email.trim(), password);
+        await signIn(account.trim(), password);
       } else {
         if (!displayName.trim()) throw new Error('請填寫顯示名稱');
-        await register(email.trim(), password, displayName.trim());
+        if (!account.trim().includes('@')) {
+          throw new Error('註冊帳號請使用電子郵件');
+        }
+        if (!phone.trim()) throw new Error('請填寫手機號碼（簡訊通知用）');
+        await register(account.trim(), password, displayName.trim(), phone.trim());
       }
     } catch (e) {
       setError(
@@ -71,98 +78,145 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>
-            {mode === 'login' ? '歡迎回家' : '加入屬靈家庭'}
-          </Text>
-          <Text style={styles.cardSub}>
-            {mode === 'login'
-              ? '登入後與家人一起使用各項功能'
-              : '註冊新會友帳號'}
-          </Text>
-
-          {mode === 'register' ? (
-            <View style={styles.field}>
-              <Ionicons
-                name="person-outline"
-                size={18}
-                color={theme.color.inkMuted}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="顯示名稱"
-                value={displayName}
-                onChangeText={setDisplayName}
-                placeholderTextColor={theme.color.inkMuted}
-              />
-            </View>
-          ) : null}
-
-          <View style={styles.field}>
-            <Ionicons
-              name="mail-outline"
-              size={18}
-              color={theme.color.inkMuted}
+          {mode === 'forgot' ? (
+            <ForgotAccessPanel
+              initialAccount={account}
+              onBack={() => {
+                setMode('login');
+                setError('');
+              }}
+              onFilledAccount={setAccount}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="電子郵件"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholderTextColor={theme.color.inkMuted}
-            />
-          </View>
-
-          <View style={styles.field}>
-            <Ionicons
-              name="lock-closed-outline"
-              size={18}
-              color={theme.color.inkMuted}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="密碼（至少 6 字元）"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPw}
-              placeholderTextColor={theme.color.inkMuted}
-            />
-            <Pressable onPress={() => setShowPw((v) => !v)} hitSlop={8}>
-              <Ionicons
-                name={showPw ? 'eye-off-outline' : 'eye-outline'}
-                size={18}
-                color={theme.color.inkMuted}
-              />
-            </Pressable>
-          </View>
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <Pressable
-            style={[styles.btn, busy && { opacity: 0.65 }]}
-            onPress={submit}
-            disabled={busy}
-          >
-            {busy ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.btnText}>
-                {mode === 'login' ? '登入' : '註冊'}
+          ) : (
+            <>
+              <Text style={styles.cardTitle}>
+                {mode === 'login' ? '歡迎回家' : '加入屬靈家庭'}
               </Text>
-            )}
-          </Pressable>
+              <Text style={styles.cardSub}>
+                {mode === 'login'
+                  ? '使用帳號與密碼登入（密碼至少 6 字元）'
+                  : '註冊需填 Email 帳號與手機（忘記時可收信／簡訊）'}
+              </Text>
 
-          <Pressable
-            onPress={() => {
-              setMode(mode === 'login' ? 'register' : 'login');
-              setError('');
-            }}
-          >
-            <Text style={styles.switch}>
-              {mode === 'login' ? '還沒有帳號？註冊' : '已有帳號？登入'}
-            </Text>
-          </Pressable>
+              {mode === 'register' ? (
+                <View style={styles.field}>
+                  <Ionicons
+                    name="person-outline"
+                    size={18}
+                    color={theme.color.inkMuted}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="顯示名稱"
+                    value={displayName}
+                    onChangeText={setDisplayName}
+                    placeholderTextColor={theme.color.inkMuted}
+                  />
+                </View>
+              ) : null}
+
+              <View style={styles.field}>
+                <Ionicons
+                  name="person-circle-outline"
+                  size={18}
+                  color={theme.color.inkMuted}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder={
+                    mode === 'login' ? '帳號（Email 或手機）' : '帳號（電子郵件）'
+                  }
+                  value={account}
+                  onChangeText={setAccount}
+                  autoCapitalize="none"
+                  keyboardType={
+                    mode === 'login' ? 'default' : 'email-address'
+                  }
+                  placeholderTextColor={theme.color.inkMuted}
+                />
+              </View>
+
+              {mode === 'register' ? (
+                <View style={styles.field}>
+                  <Ionicons
+                    name="call-outline"
+                    size={18}
+                    color={theme.color.inkMuted}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="手機（例：0912345678）"
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                    placeholderTextColor={theme.color.inkMuted}
+                  />
+                </View>
+              ) : null}
+
+              <View style={styles.field}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color={theme.color.inkMuted}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="密碼（至少 6 字元）"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPw}
+                  placeholderTextColor={theme.color.inkMuted}
+                />
+                <Pressable onPress={() => setShowPw((v) => !v)} hitSlop={8}>
+                  <Ionicons
+                    name={showPw ? 'eye-off-outline' : 'eye-outline'}
+                    size={18}
+                    color={theme.color.inkMuted}
+                  />
+                </Pressable>
+              </View>
+
+              {mode === 'login' ? (
+                <Pressable
+                  onPress={() => {
+                    setMode('forgot');
+                    setError('');
+                  }}
+                  hitSlop={6}
+                >
+                  <Text style={styles.forgot}>忘記帳號 / 忘記密碼</Text>
+                </Pressable>
+              ) : null}
+
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+
+              <Pressable
+                style={[styles.btn, busy && { opacity: 0.65 }]}
+                onPress={submit}
+                disabled={busy}
+              >
+                {busy ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.btnText}>
+                    {mode === 'login' ? '登入' : '註冊'}
+                  </Text>
+                )}
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  setMode(mode === 'login' ? 'register' : 'login');
+                  setError('');
+                }}
+              >
+                <Text style={styles.switch}>
+                  {mode === 'login' ? '還沒有帳號？註冊' : '已有帳號？登入'}
+                </Text>
+              </Pressable>
+            </>
+          )}
         </View>
       </KeyboardAvoidingView>
 
@@ -252,6 +306,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  forgot: {
+    color: '#2563EB',
+    fontSize: 14,
+    marginTop: -4,
+  },
   switch: {
     textAlign: 'center',
     color: theme.color.brand,
