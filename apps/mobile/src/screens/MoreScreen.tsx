@@ -46,11 +46,19 @@ export default function MoreScreen() {
         <Item
           icon="globe-outline"
           title="教會 YouTube"
-          subtitle="開啟瀏覽器"
+          subtitle="主日崇拜頻道"
           onPress={() =>
             Linking.openURL(
               'https://www.youtube.com/@breadoflifechristianchurch9830',
             )
+          }
+        />
+        <Item
+          icon="logo-youtube"
+          title="成二牧區專屬頻道"
+          subtitle="開啟瀏覽器"
+          onPress={() =>
+            Linking.openURL('https://www.youtube.com/@成二牧區高雄靈糧堂')
           }
         />
         <Item

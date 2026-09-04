@@ -48,6 +48,10 @@ services:
         value: UCdcDDnZj76AwNqj18jtTAgw
       - key: YOUTUBE_CHANNEL_URL
         value: https://www.youtube.com/@breadoflifechristianchurch9830
+      - key: YOUTUBE_ZONE_CHANNEL_ID
+        value: UCK2s9sv4b-RqISob2uu8aiA
+      - key: YOUTUBE_ZONE_CHANNEL_URL
+        value: https://www.youtube.com/@成二牧區高雄靈糧堂
       - key: SEED_ADMIN_PASSWORD
         sync: false
 

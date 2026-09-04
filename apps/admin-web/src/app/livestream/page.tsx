@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { apiFetch, ApiError } from '../../lib/api';
 
+type ChannelKey = 'sunday' | 'zone';
+
 interface VideoInfo {
   videoId: string;
   title: string;
@@ -12,38 +14,89 @@ interface VideoInfo {
   source: 'youtube' | 'demo';
   channelUrl?: string;
   isThisWeek?: boolean;
+  channel?: ChannelKey;
+  channelLabel?: string;
 }
 
-/** 主日崇拜預覽 — 高雄靈糧堂頻道最新主日信息 */
+const CHANNELS: Array<{ key: ChannelKey; label: string; hint: string }> = [
+  {
+    key: 'sunday',
+    label: '主日崇拜',
+    hint: '高雄靈糧堂主日信息',
+  },
+  {
+    key: 'zone',
+    label: '成二牧區專屬頻道',
+    hint: '@成二牧區高雄靈糧堂',
+  },
+];
+
+/** 主日崇拜預覽 — 教會主日＋成二牧區專屬 */
 export default function LivestreamAdminPage() {
+  const [channel, setChannel] = useState<ChannelKey>('sunday');
   const [video, setVideo] = useState<VideoInfo | null>(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch<VideoInfo>('/livestream/latest')
+    setLoading(true);
+    setError('');
+    setVideo(null);
+    apiFetch<VideoInfo>(`/livestream/latest?channel=${channel}`)
       .then(setVideo)
       .catch((e) =>
         setError(e instanceof ApiError ? e.message : '載入失敗'),
-      );
-  }, []);
+      )
+      .finally(() => setLoading(false));
+  }, [channel]);
+
+  const active = CHANNELS.find((c) => c.key === channel)!;
 
   return (
     <div>
       <h2>主日崇拜（YouTube）</h2>
       <p className="muted">
-        來源頻道：
-        <a
-          href="https://www.youtube.com/@breadoflifechristianchurch9830"
-          target="_blank"
-          rel="noreferrer"
-        >
-          @breadoflifechristianchurch9830
-        </a>
-        （高雄靈糧堂主日信息）。顯示<strong>當週最新上架</strong>
+        可切換「主日崇拜」與「成二牧區專屬頻道」。顯示<strong>當週最新上架</strong>
         ；當週尚無新片則改顯示近期最新一集。無 API Key 時以公開 RSS 抓取。
       </p>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        {CHANNELS.map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            onClick={() => setChannel(c.key)}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 8,
+              border:
+                c.key === channel ? '1px solid #C46B4A' : '1px solid #EADFD6',
+              background: c.key === channel ? '#F6E6DE' : '#fff',
+              color: c.key === channel ? '#C46B4A' : '#3D2C29',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      <p className="muted">
+        目前頻道：{active.label}（{active.hint}）
+        {video?.channelUrl ? (
+          <>
+            {' · '}
+            <a href={video.channelUrl} target="_blank" rel="noreferrer">
+              開啟頻道
+            </a>
+          </>
+        ) : null}
+      </p>
+
       {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
-      {video ? (
+      {loading ? <p className="muted">載入中…</p> : null}
+      {!loading && video ? (
         <div className="card">
           {video.source === 'demo' ? (
             <span className="badge">備援</span>
@@ -88,9 +141,7 @@ export default function LivestreamAdminPage() {
             </div>
           ) : null}
         </div>
-      ) : (
-        <p className="muted">載入中…</p>
-      )}
+      ) : null}
     </div>
   );
 }

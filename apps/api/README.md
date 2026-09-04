@@ -63,7 +63,8 @@ npm run dev                  # http://localhost:3001/prayer
 | devotions | `GET/POST /devotions`、`GET/PATCH/DELETE /devotions/:id` | 會友 | 內容 AES-256 加密、僅本人 |
 | articles | `GET /articles`、`GET /articles/:slug` | 公開 | 讀取 |
 | articles | `POST /articles`、`PATCH /articles/:id` | STAFF | CMS 上稿 |
-| livestream | `GET /livestream/latest` | 公開 | YouTube 最新影片（快取）|
+| livestream | `GET /livestream/latest?channel=sunday\|zone` | 公開 | YouTube 最新影片（快取）|
+| livestream | `GET /livestream/channels` | 公開 | 可選頻道列表 |
 | groups | `GET /groups/areas`、`GET /groups/:id` | 公開 | 目錄 |
 | groups | `POST /groups` | STAFF；`PATCH /groups/:id` | GROUP_LEADER | 小組長限自己小組 |
 | events | `GET /events`、`POST /events/:id/register`、`/cancel`、`/checkin` | 會友 | 報名/簽到 |

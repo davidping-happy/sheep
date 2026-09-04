@@ -15,9 +15,9 @@ https://churchsheep-api.onrender.com/downloads/churchsheep-latest.apk
 
 ### 備用
 
-- GitHub：https://github.com/davidping-happy/sheep/releases/download/v1.1.10-preview/churchsheep-1.1.10.apk
+- GitHub：https://github.com/davidping-happy/sheep/releases/download/v1.1.12-preview/churchsheep-1.1.12.apk
 
-> 1.1.9 新增「代禱牆留言回應」，請更新到最新版。
+> 1.1.12 主日崇拜可切換「成二牧區專屬頻道」。
 
 ## 短訊範本
 

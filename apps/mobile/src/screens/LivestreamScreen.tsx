@@ -12,6 +12,8 @@ import {
 import { api, ApiError } from '../lib/api';
 import { theme } from '../theme';
 
+type ChannelKey = 'sunday' | 'zone';
+
 interface VideoInfo {
   videoId: string;
   title: string;
@@ -22,105 +24,142 @@ interface VideoInfo {
   source: 'youtube' | 'demo';
   channelUrl?: string;
   isThisWeek?: boolean;
+  channel?: ChannelKey;
+  channelLabel?: string;
 }
 
+const CHANNELS: Array<{ key: ChannelKey; label: string }> = [
+  { key: 'sunday', label: '主日崇拜' },
+  { key: 'zone', label: '成二牧區專屬頻道' },
+];
+
 /**
- * 主日崇拜：顯示最新 YouTube 影片。
- * 網頁用 iframe；原生用開啟 YouTube（避免強制依賴 webview 套件）。
+ * 主日崇拜：教會主日頻道＋成二牧區專屬頻道，可切換。
  */
 export default function LivestreamScreen() {
+  const [channel, setChannel] = useState<ChannelKey>('sunday');
   const [video, setVideo] = useState<VideoInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (ch: ChannelKey) => {
     setError('');
     setLoading(true);
     try {
-      const data = await api<VideoInfo>('/livestream/latest');
+      const data = await api<VideoInfo>(`/livestream/latest?channel=${ch}`);
       setVideo(data);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '載入失敗');
+      setVideo(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    load(channel);
+  }, [channel, load]);
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
-  if (error || !video) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.error}>{error || '尚無影片'}</Text>
-        <Pressable style={styles.btn} onPress={load}>
-          <Text style={styles.btnText}>重試</Text>
-        </Pressable>
-      </View>
-    );
-  }
+  const activeLabel =
+    CHANNELS.find((c) => c.key === channel)?.label ?? '主日崇拜';
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container}>
-      {video.source === 'demo' ? (
-        <Text style={styles.demoBadge}>
-          暫無法嵌入影片，請點下方開啟頻道觀看主日信息
-        </Text>
-      ) : (
-        <Text style={styles.channelHint}>
-          高雄靈糧堂 · {video.isThisWeek ? '當週最新上架' : '近期最新上架'}
-        </Text>
-      )}
-      <Text style={styles.title}>{video.title}</Text>
-      <Text style={styles.meta}>
-        {new Date(video.publishedAt).toLocaleString()}
-      </Text>
+      <View style={styles.seg}>
+        {CHANNELS.map((c) => {
+          const active = c.key === channel;
+          return (
+            <Pressable
+              key={c.key}
+              style={[styles.segItem, active && styles.segItemActive]}
+              onPress={() => setChannel(c.key)}
+            >
+              <Text
+                style={[styles.segText, active && styles.segTextActive]}
+                numberOfLines={2}
+              >
+                {c.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
-      {Platform.OS === 'web' && video.videoId ? (
-        <View style={styles.player}>
-          {typeof document !== 'undefined' ? (
-            <View style={{ flex: 1 }}>
-              {/* eslint-disable-next-line react/no-unknown-property */}
-              <iframe
-                src={video.embedUrl}
-                title={video.title}
-                style={{ border: 0, width: '100%', height: '100%' } as object}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </View>
-          ) : null}
+      {loading ? (
+        <View style={styles.inlineCenter}>
+          <ActivityIndicator />
+        </View>
+      ) : error || !video ? (
+        <View style={styles.inlineCenter}>
+          <Text style={styles.error}>{error || '尚無影片'}</Text>
+          <Pressable style={styles.btn} onPress={() => load(channel)}>
+            <Text style={styles.btnText}>重試</Text>
+          </Pressable>
         </View>
       ) : (
-        <Pressable
-          style={styles.thumbBox}
-          onPress={() => Linking.openURL(video.watchUrl)}
-        >
-          <Text style={styles.playHint}>點擊以 YouTube App／瀏覽器播放</Text>
-          <Text style={styles.link}>{video.watchUrl}</Text>
-        </Pressable>
-      )}
+        <>
+          {video.source === 'demo' ? (
+            <Text style={styles.demoBadge}>
+              暫無法嵌入影片，請點下方開啟頻道觀看
+            </Text>
+          ) : (
+            <Text style={styles.channelHint}>
+              {video.channelLabel ?? activeLabel} ·{' '}
+              {video.isThisWeek ? '當週最新上架' : '近期最新上架'}
+            </Text>
+          )}
+          <Text style={styles.title}>{video.title}</Text>
+          <Text style={styles.meta}>
+            {new Date(video.publishedAt).toLocaleString()}
+          </Text>
 
-      <Pressable style={styles.btn} onPress={() => Linking.openURL(video.watchUrl)}>
-        <Text style={styles.btnText}>在 YouTube 開啟本集</Text>
-      </Pressable>
-      {video.channelUrl ? (
-        <Pressable
-          style={styles.ghostBtn}
-          onPress={() => Linking.openURL(video.channelUrl!)}
-        >
-          <Text style={styles.ghostBtnText}>開啟頻道（更多主日信息）</Text>
-        </Pressable>
-      ) : null}
+          {Platform.OS === 'web' && video.videoId ? (
+            <View style={styles.player}>
+              {typeof document !== 'undefined' ? (
+                <View style={{ flex: 1 }}>
+                  {/* eslint-disable-next-line react/no-unknown-property */}
+                  <iframe
+                    src={video.embedUrl}
+                    title={video.title}
+                    style={
+                      { border: 0, width: '100%', height: '100%' } as object
+                    }
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </View>
+              ) : null}
+            </View>
+          ) : (
+            <Pressable
+              style={styles.thumbBox}
+              onPress={() => Linking.openURL(video.watchUrl)}
+            >
+              <Text style={styles.playHint}>
+                點擊以 YouTube App／瀏覽器播放
+              </Text>
+              <Text style={styles.link}>{video.watchUrl}</Text>
+            </Pressable>
+          )}
+
+          <Pressable
+            style={styles.btn}
+            onPress={() => Linking.openURL(video.watchUrl)}
+          >
+            <Text style={styles.btnText}>在 YouTube 開啟本集</Text>
+          </Pressable>
+          {video.channelUrl ? (
+            <Pressable
+              style={styles.ghostBtn}
+              onPress={() => Linking.openURL(video.channelUrl!)}
+            >
+              <Text style={styles.ghostBtnText}>
+                開啟頻道（更多{video.channelLabel ?? activeLabel}）
+              </Text>
+            </Pressable>
+          ) : null}
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -133,12 +172,41 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.bg,
     flexGrow: 1,
   },
-  center: {
+  seg: {
+    flexDirection: 'row',
+    backgroundColor: theme.color.bgElevated,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.color.border,
+    padding: 4,
+    gap: 4,
+  },
+  segItem: {
     flex: 1,
+    minHeight: theme.tapMin,
+    borderRadius: theme.radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  segItemActive: {
+    backgroundColor: theme.color.brandSoft,
+  },
+  segText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.color.inkMuted,
+    textAlign: 'center',
+  },
+  segTextActive: {
+    color: theme.color.brand,
+  },
+  inlineCenter: {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: theme.color.bg,
+    paddingVertical: 40,
   },
   demoBadge: {
     backgroundColor: theme.color.warnSoft,
@@ -176,6 +244,7 @@ const styles = StyleSheet.create({
     minHeight: theme.tapMin,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
   },
   btnText: { color: theme.color.brandInk, fontWeight: '600' },
   ghostBtn: {

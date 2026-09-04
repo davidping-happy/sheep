@@ -1,5 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+
+export type LivestreamChannelKey = 'sunday' | 'zone';
 
 export interface VideoInfo {
   videoId: string;
@@ -12,6 +14,9 @@ export interface VideoInfo {
   channelUrl?: string;
   /** 是否為當週上架 */
   isThisWeek?: boolean;
+  /** sunday=教會主日崇拜；zone=成二牧區專屬 */
+  channel?: LivestreamChannelKey;
+  channelLabel?: string;
 }
 
 interface RawVideo {
@@ -21,67 +26,105 @@ interface RawVideo {
   thumbnailUrl?: string;
 }
 
-/** 高雄靈糧堂／成二牧區主日信息預設頻道 */
-const DEFAULT_CHANNEL_ID = 'UCdcDDnZj76AwNqj18jtTAgw';
-const DEFAULT_CHANNEL_URL =
+interface ChannelDef {
+  key: LivestreamChannelKey;
+  label: string;
+  id: string;
+  url: string;
+  fallbackTitle: string;
+}
+
+/** 高雄靈糧堂主日信息預設頻道 */
+const DEFAULT_SUNDAY_ID = 'UCdcDDnZj76AwNqj18jtTAgw';
+const DEFAULT_SUNDAY_URL =
   'https://www.youtube.com/@breadoflifechristianchurch9830';
+
+/** 成二牧區專屬頻道 */
+const DEFAULT_ZONE_ID = 'UCK2s9sv4b-RqISob2uu8aiA';
+const DEFAULT_ZONE_URL =
+  'https://www.youtube.com/@成二牧區高雄靈糧堂';
 
 const SUNDAY_HINT = /主崇|主日|崇拜|聚會直播/;
 
 /**
- * 2. 主日崇拜 YouTube 連結 (§二.2)。
- *  以「當週最新上架」為主；當週無片則退回頻道最近一集。
+ * 主日崇拜／成二牧區專屬 YouTube。
+ * 以「當週最新上架」為主；當週無片則退回頻道最近一集。
  */
 @Injectable()
 export class LivestreamService {
   private readonly logger = new Logger(LivestreamService.name);
-  private cache: { data: VideoInfo | null; at: number } = { data: null, at: 0 };
+  private readonly cache = new Map<
+    LivestreamChannelKey,
+    { data: VideoInfo; at: number }
+  >();
   private readonly TTL_MS = 3 * 60 * 1000; // 3 分鐘，較快跟上新上架
 
   constructor(private readonly config: ConfigService) {}
 
-  private get channelId(): string {
-    return (
-      this.config.get<string>('youtube.channelId')?.trim() ||
-      DEFAULT_CHANNEL_ID
-    );
+  listChannels(): Array<{ key: LivestreamChannelKey; label: string; url: string }> {
+    return (['sunday', 'zone'] as const).map((key) => {
+      const ch = this.resolveChannel(key);
+      return { key: ch.key, label: ch.label, url: ch.url };
+    });
   }
 
-  private get channelUrl(): string {
-    return (
-      this.config.get<string>('youtube.channelUrl')?.trim() ||
-      DEFAULT_CHANNEL_URL
-    );
-  }
-
-  async getLatest(): Promise<VideoInfo> {
-    if (this.cache.data && Date.now() - this.cache.at < this.TTL_MS) {
-      return this.cache.data;
+  async getLatest(channelKey: LivestreamChannelKey = 'sunday'): Promise<VideoInfo> {
+    const channel = this.resolveChannel(channelKey);
+    const hit = this.cache.get(channel.key);
+    if (hit && Date.now() - hit.at < this.TTL_MS) {
+      return hit.data;
     }
 
     const apiKey = this.config.get<string>('youtube.apiKey')?.trim();
     let list: RawVideo[] = [];
 
     if (apiKey) {
-      list = await this.listViaApi(apiKey, this.channelId);
+      list = await this.listViaApi(apiKey, channel.id);
     }
     if (list.length === 0) {
-      list = await this.listViaRss(this.channelId);
+      list = await this.listViaRss(channel.id);
     }
 
     const picked = this.pickThisWeekLatest(list);
     const result = picked
-      ? this.toVideoInfo(picked.video, picked.isThisWeek)
-      : this.channelFallback();
+      ? this.toVideoInfo(picked.video, picked.isThisWeek, channel)
+      : this.channelFallback(channel);
 
     if (picked) {
       this.logger.log(
-        `主日信息：${picked.isThisWeek ? '當週最新' : '近期最新'} — ${picked.video.title}`,
+        `${channel.label}：${picked.isThisWeek ? '當週最新' : '近期最新'} — ${picked.video.title}`,
       );
     }
 
-    this.cache = { data: result, at: Date.now() };
+    this.cache.set(channel.key, { data: result, at: Date.now() });
     return result;
+  }
+
+  private resolveChannel(key: LivestreamChannelKey): ChannelDef {
+    if (key === 'zone') {
+      return {
+        key: 'zone',
+        label: '成二牧區專屬頻道',
+        id:
+          this.config.get<string>('youtube.zoneChannelId')?.trim() ||
+          DEFAULT_ZONE_ID,
+        url:
+          this.config.get<string>('youtube.zoneChannelUrl')?.trim() ||
+          DEFAULT_ZONE_URL,
+        fallbackTitle: '成二牧區專屬頻道（請至頻道觀看）',
+      };
+    }
+    return {
+      key: 'sunday',
+      label: '主日崇拜',
+      id:
+        this.config.get<string>('youtube.channelId')?.trim() ||
+        DEFAULT_SUNDAY_ID,
+      url:
+        this.config.get<string>('youtube.channelUrl')?.trim() ||
+        DEFAULT_SUNDAY_URL,
+      fallbackTitle: '高雄靈糧堂主日信息（請至頻道觀看）',
+    };
   }
 
   /** 當週（台北時間週一 00:00 起）最新上架；優先主日相關標題 */
@@ -209,7 +252,11 @@ export class LivestreamService {
     }
   }
 
-  private toVideoInfo(v: RawVideo, isThisWeek: boolean): VideoInfo {
+  private toVideoInfo(
+    v: RawVideo,
+    isThisWeek: boolean,
+    channel: ChannelDef,
+  ): VideoInfo {
     return {
       videoId: v.videoId,
       title: v.title,
@@ -218,21 +265,25 @@ export class LivestreamService {
       watchUrl: `https://www.youtube.com/watch?v=${v.videoId}`,
       thumbnailUrl: v.thumbnailUrl,
       source: 'youtube',
-      channelUrl: this.channelUrl,
+      channelUrl: channel.url,
       isThisWeek,
+      channel: channel.key,
+      channelLabel: channel.label,
     };
   }
 
-  private channelFallback(): VideoInfo {
+  private channelFallback(channel: ChannelDef): VideoInfo {
     return {
       videoId: '',
-      title: '高雄靈糧堂主日信息（請至頻道觀看）',
+      title: channel.fallbackTitle,
       publishedAt: new Date().toISOString(),
-      embedUrl: this.channelUrl,
-      watchUrl: this.channelUrl,
+      embedUrl: channel.url,
+      watchUrl: channel.url,
       source: 'demo',
-      channelUrl: this.channelUrl,
+      channelUrl: channel.url,
       isThisWeek: false,
+      channel: channel.key,
+      channelLabel: channel.label,
     };
   }
 
@@ -244,4 +295,14 @@ export class LivestreamService {
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'");
   }
+}
+
+export function parseLivestreamChannel(
+  raw?: string,
+): LivestreamChannelKey {
+  const key = (raw ?? 'sunday').trim().toLowerCase();
+  if (key === 'sunday' || key === 'zone') return key;
+  throw new BadRequestException(
+    'channel 僅支援 sunday（主日崇拜）或 zone（成二牧區專屬）',
+  );
 }
