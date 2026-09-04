@@ -27,8 +27,9 @@ export class SchemaSyncBootstrap implements OnModuleInit {
     if (this.synced) return;
     try {
       await this.prisma.$connect();
+      // 必須 ::text：Prisma 無法反序列化 PostgreSQL regclass
       const rows = (await this.prisma.$queryRawUnsafe(
-        `SELECT to_regclass('public.users') AS reg`,
+        `SELECT to_regclass('public.users')::text AS reg`,
       )) as Array<{ reg: string | null }>;
       if (rows[0]?.reg) {
         this.synced = true;
