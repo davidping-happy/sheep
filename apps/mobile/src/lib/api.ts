@@ -121,12 +121,18 @@ export async function registerRequest(
   account: string,
   password: string,
   phone: string,
+  email?: string,
 ) {
   const data = await api<Tokens>(
     '/auth/register',
     {
       method: 'POST',
-      body: JSON.stringify({ account, password, phone }),
+      body: JSON.stringify({
+        account,
+        password,
+        phone,
+        ...(email ? { email } : {}),
+      }),
     },
     true,
   );

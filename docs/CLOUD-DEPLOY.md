@@ -103,22 +103,47 @@ Render 免費 Postgres 有時會被刪／無法連線。可二選一：
 
 ---
 
-## 四之一、忘記帳號／密碼（簡訊）
+## 四之一、忘記帳號／密碼（簡訊優先＋Email 備援）
 
-註冊欄位為：**帳號（顯示名稱）／手機／密碼**（不必 Email）。  
-忘記帳號或密碼時，以註冊手機 **簡訊** 通知。
+註冊：**帳號（顯示名稱）／手機／密碼**，**Email 選填**（備援）。  
+忘記時：先簡訊 → 失敗且有 Email 再寄信。
 
-在 **churchsheep-api** Environment 設定 Twilio：
+### 簡訊（擇一）
+
+**A. 三竹 Mitake（建議）**
 
 | 變數 | 說明 |
 |------|------|
-| `TWILIO_ACCOUNT_SID` | Twilio Account SID |
-| `TWILIO_AUTH_TOKEN` | Twilio Auth Token |
-| `TWILIO_FROM` | 簡訊號碼，例：`+1681……` |
-| `PASSWORD_RESET_RETURN_CODE` | 測試用：設 `true` 時 App 可顯示驗證碼 |
-| `BRAND_NAME` | 選填，簡訊顯示名稱 |
+| `SMS_PROVIDER` | 可填 `mitake`（或省略，有帳密會自動選） |
+| `MITAKE_USERNAME` | 三竹帳號 |
+| `MITAKE_PASSWORD` | 三竹密碼 |
+| `MITAKE_API_BASE` | 選填，預設 `https://smsapi.mitake.com.tw/api/mtk` |
 
-未設定 Twilio 時，驗證碼會寫入 Render Logs；畫面會提示聯絡同工。
+申請 API 時請向三竹綁定 **Render 出口 IP**（或依客服指示）。
+
+**B. Every8d**
+
+| 變數 | 說明 |
+|------|------|
+| `SMS_PROVIDER` | `every8d`（或省略自動選） |
+| `EVERY8D_UID` | 帳號 |
+| `EVERY8D_PWD` | 密碼 |
+
+**C. Twilio（備選）** `TWILIO_ACCOUNT_SID`／`TWILIO_AUTH_TOKEN`／`TWILIO_FROM`
+
+### Email 備援（Resend）
+
+| 變數 | 說明 |
+|------|------|
+| `RESEND_API_KEY` | Resend API Key |
+| `MAIL_FROM` | 建議已驗證網域，例：`成二牧區 <noreply@yourdomain.com>` |
+
+### 測試
+
+| 變數 | 說明 |
+|------|------|
+| `PASSWORD_RESET_RETURN_CODE` | `true` 時 App 可顯示驗證碼（正式請關閉） |
+| `BRAND_NAME` | 簡訊／信件顯示名稱 |
 
 ---
 

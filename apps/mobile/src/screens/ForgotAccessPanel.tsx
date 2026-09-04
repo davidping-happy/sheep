@@ -148,7 +148,7 @@ export default function ForgotAccessPanel({ onBack, onFilledAccount }: Props) {
     <View style={styles.wrap}>
       <Text style={styles.title}>忘記帳號 / 忘記密碼</Text>
       <Text style={styles.sub}>
-        請使用註冊時留下的手機號碼；驗證碼與帳號提醒以簡訊通知。
+        請用註冊手機；驗證碼優先簡訊，失敗時改寄備用 Email。
       </Text>
 
       <View style={styles.tabs}>

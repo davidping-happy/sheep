@@ -38,15 +38,15 @@ export class MailService {
 
   async sendAccountHint(
     to: string,
-    accountEmail: string,
+    accountLabel: string,
     brandName: string,
   ): Promise<MailSendResult> {
     const subject = `【${brandName}】登入帳號提醒`;
     const html = `
       <p>您好，</p>
       <p>您申請查詢「${brandName}」App 登入帳號。</p>
-      <p>您的登入帳號（Email）為：<strong>${accountEmail}</strong></p>
-      <p>亦可使用註冊手機號碼登入。若非您本人操作，請忽略本信。</p>
+      <p>您的登入帳號為：<strong>${accountLabel}</strong></p>
+      <p>若非您本人操作，請忽略本信。</p>
     `;
     return this.send(to, subject, html);
   }

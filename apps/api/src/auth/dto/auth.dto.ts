@@ -23,10 +23,15 @@ export class RegisterDto {
   @MinLength(6, { message: '密碼至少 6 字元' })
   password!: string;
 
-  /** 手機（台灣 09xxxxxxxx），忘記帳號／密碼用簡訊 */
+  /** 手機（台灣 09xxxxxxxx），忘記帳號／密碼優先簡訊 */
   @IsString()
   @MinLength(9)
   phone!: string;
+
+  /** 備用 Email（選填；簡訊失敗時可改寄驗證碼） */
+  @IsOptional()
+  @IsEmail({}, { message: '備用 Email 格式不正確' })
+  email?: string;
 
   @IsOptional()
   @IsBoolean()

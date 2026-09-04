@@ -21,13 +21,14 @@ import {
   RegisterDto,
   ResetPasswordDto,
 } from './dto/auth.dto';
+import { MailService, type MailSendResult } from './mail.service';
 import { SmsService } from './sms.service';
 
 /**
  * 身份驗證：
- *  - 帳號＝顯示名稱（繁中／英／數字），不必 Email
- *  - 註冊：帳號／手機／密碼（至少 6 字元）
- *  - 忘記帳號／密碼：僅以註冊手機簡訊通知
+ *  - 帳號＝顯示名稱（繁中／英／數字），Email 選填備援
+ *  - 註冊：帳號／手機／密碼（+ 選填 Email）
+ *  - 忘記帳號／密碼：簡訊優先（三竹／Every8d），Email 備援
  */
 @Injectable()
 export class AuthService {
@@ -40,6 +41,7 @@ export class AuthService {
     private readonly audit: AuditService,
     private readonly schemaSync: SchemaSyncBootstrap,
     private readonly sms: SmsService,
+    private readonly mail: MailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -65,9 +67,17 @@ export class AuthService {
       });
       if (phoneTaken) throw new ConflictException('此手機號碼已被註冊');
 
+      const email = dto.email?.trim().toLowerCase() || null;
+      if (email) {
+        const emailTaken = await this.prisma.user.findFirst({
+          where: { email: { equals: email, mode: 'insensitive' } },
+        });
+        if (emailTaken) throw new ConflictException('此 Email 已被使用');
+      }
+
       const user = await this.prisma.user.create({
         data: {
-          email: null,
+          email,
           phone,
           passwordHash: await bcrypt.hash(dto.password, 12),
           displayName: account,
@@ -189,7 +199,7 @@ export class AuthService {
     });
   }
 
-  /** 忘記密碼：以手機寄送驗證碼（簡訊） */
+  /** 忘記密碼：簡訊優先，Email 備援 */
   async forgotPassword(dto: ForgotPasswordDto) {
     await this.ensureDb();
     await this.schemaSync.ensureSchema();
@@ -198,8 +208,9 @@ export class AuthService {
     const generic = {
       ok: true as const,
       smsSent: false,
+      mailSent: false,
       message:
-        '若此手機已註冊，驗證碼將以簡訊寄出（約 15 分鐘有效）。未收到請稍後再試或聯絡牧區同工。',
+        '若此手機已註冊，驗證碼將優先以簡訊寄出（失敗時改寄備用 Email）。',
     };
     if (!phone) return generic;
 
@@ -227,15 +238,23 @@ export class AuthService {
     });
 
     const brand = this.brandName();
-    const smsSent = await this.sms.sendPasswordResetCode(
+    const smsResult = await this.sms.sendPasswordResetCode(
       user.phone!,
       code,
       brand,
     );
+    let mailResult: MailSendResult = { ok: false };
+    if (!smsResult.ok && user.email) {
+      mailResult = await this.mail.sendPasswordResetCode(
+        user.email,
+        code,
+        brand,
+      );
+    }
 
-    if (!smsSent) {
+    if (!smsResult.ok && !mailResult.ok) {
       this.logger.warn(
-        `password reset code for ${user.phone}: ${code}（簡訊未送出；請設 TWILIO_*）`,
+        `password reset code for ${user.phone}/${user.email ?? '-'}: ${code}（簡訊／Email 皆未送出） sms=${smsResult.error ?? ''} mail=${mailResult.error ?? ''}`,
       );
     }
 
@@ -243,12 +262,27 @@ export class AuthService {
       process.env.PASSWORD_RESET_RETURN_CODE === '1' ||
       process.env.PASSWORD_RESET_RETURN_CODE === 'true';
 
+    const channels: string[] = [];
+    if (smsResult.ok) channels.push('簡訊');
+    if (mailResult.ok) channels.push('Email');
+
+    let message: string;
+    if (channels.length) {
+      message = `驗證碼已透過「${channels.join('、')}」送出，約 15 分鐘內有效。`;
+    } else if (smsResult.error && !user.email) {
+      message = `${smsResult.error}。此帳號未留備用 Email，請聯絡牧區同工協助。`;
+    } else {
+      message =
+        smsResult.error ||
+        mailResult.error ||
+        '驗證碼已產生，但簡訊／Email 皆未送出。請聯絡牧區同工。';
+    }
+
     return {
       ok: true as const,
-      smsSent,
-      message: smsSent
-        ? '驗證碼已以簡訊寄出，約 15 分鐘內有效。'
-        : '驗證碼已產生，但簡訊尚未設定完成（需 TWILIO）。請聯絡牧區同工，或稍後再試。',
+      smsSent: smsResult.ok,
+      mailSent: mailResult.ok,
+      message,
       ...(debug ? { debugCode: code } : {}),
     };
   }
@@ -328,7 +362,7 @@ export class AuthService {
         isActive: true,
         phone: { in: this.phoneVariants(phone) },
       },
-      select: { displayName: true, phone: true },
+      select: { displayName: true, phone: true, email: true },
     });
 
     if (!user?.phone) {
@@ -336,25 +370,41 @@ export class AuthService {
         ok: true as const,
         found: false as const,
         smsSent: false,
+        mailSent: false,
         message: '找不到符合的手機號碼。請確認註冊時留下的號碼，或聯絡牧區同工。',
       };
     }
 
     const brand = this.brandName();
-    const smsSent = await this.sms.sendAccountHint(
+    const smsResult = await this.sms.sendAccountHint(
       user.phone,
       user.displayName,
       brand,
     );
+    let mailResult: MailSendResult = { ok: false };
+    if (!smsResult.ok && user.email) {
+      mailResult = await this.mail.sendAccountHint(
+        user.email,
+        user.displayName,
+        brand,
+      );
+    }
+
+    const channels: string[] = [];
+    if (smsResult.ok) channels.push('簡訊');
+    if (mailResult.ok) channels.push('Email');
 
     return {
       ok: true as const,
       found: true as const,
       accountHint: this.maskAccount(user.displayName),
-      smsSent,
-      message: smsSent
-        ? `已簡訊通知您的登入帳號（提示：${this.maskAccount(user.displayName)}）。`
-        : `找到帳號提示：${this.maskAccount(user.displayName)}。簡訊尚未設定時，請聯絡牧區同工確認。`,
+      smsSent: smsResult.ok,
+      mailSent: mailResult.ok,
+      message: channels.length
+        ? `已透過「${channels.join('、')}」通知您的登入帳號（提示：${this.maskAccount(user.displayName)}）。`
+        : smsResult.error ||
+          mailResult.error ||
+          `找到帳號提示：${this.maskAccount(user.displayName)}。請聯絡牧區同工確認。`,
     };
   }
 

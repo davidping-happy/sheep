@@ -19,7 +19,12 @@ interface AuthState {
   signedIn: boolean;
   signIn: (account: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  register: (account: string, password: string, phone: string) => Promise<void>;
+  register: (
+    account: string,
+    password: string,
+    phone: string,
+    email?: string,
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -43,8 +48,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(
-    async (account: string, password: string, phone: string) => {
-      await registerRequest(account, password, phone);
+    async (
+      account: string,
+      password: string,
+      phone: string,
+      email?: string,
+    ) => {
+      await registerRequest(account, password, phone, email);
       setSignedIn(true);
     },
     [],

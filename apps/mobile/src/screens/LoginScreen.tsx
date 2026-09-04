@@ -30,6 +30,7 @@ export default function LoginScreen() {
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -48,7 +49,12 @@ export default function LoginScreen() {
           throw new Error('帳號限 2～32 字，可為繁體中文、英文、數字');
         }
         if (!phone.trim()) throw new Error('請填寫手機號碼（忘記帳號／密碼用）');
-        await register(a, password, phone.trim());
+        await register(
+          a,
+          password,
+          phone.trim(),
+          email.trim() || undefined,
+        );
       }
     } catch (e) {
       setError(
@@ -96,7 +102,7 @@ export default function LoginScreen() {
               <Text style={styles.cardSub}>
                 {mode === 'login'
                   ? '使用帳號與密碼登入（密碼至少 6 字元）'
-                  : '註冊請填：帳號、手機、密碼（不必 Email）'}
+                  : '註冊請填帳號、手機、密碼；Email 選填（簡訊備援）'}
               </Text>
 
               <View style={styles.field}>
@@ -116,21 +122,39 @@ export default function LoginScreen() {
               </View>
 
               {mode === 'register' ? (
-                <View style={styles.field}>
-                  <Ionicons
-                    name="call-outline"
-                    size={18}
-                    color={theme.color.inkMuted}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="手機（例：0912345678）"
-                    value={phone}
-                    onChangeText={setPhone}
-                    keyboardType="phone-pad"
-                    placeholderTextColor={theme.color.inkMuted}
-                  />
-                </View>
+                <>
+                  <View style={styles.field}>
+                    <Ionicons
+                      name="call-outline"
+                      size={18}
+                      color={theme.color.inkMuted}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="手機（例：0912345678）"
+                      value={phone}
+                      onChangeText={setPhone}
+                      keyboardType="phone-pad"
+                      placeholderTextColor={theme.color.inkMuted}
+                    />
+                  </View>
+                  <View style={styles.field}>
+                    <Ionicons
+                      name="mail-outline"
+                      size={18}
+                      color={theme.color.inkMuted}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="備用 Email（選填）"
+                      value={email}
+                      onChangeText={setEmail}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      placeholderTextColor={theme.color.inkMuted}
+                    />
+                  </View>
+                </>
               ) : null}
 
               <View style={styles.field}>
