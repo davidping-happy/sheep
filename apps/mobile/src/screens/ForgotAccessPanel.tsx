@@ -12,25 +12,19 @@ import { ApiError, api } from '../lib/api';
 import { theme } from '../theme';
 
 type Tab = 'password' | 'account';
-type PwStep = 'account' | 'code';
+type PwStep = 'phone' | 'code';
 
 type Props = {
-  initialAccount?: string;
   onBack: () => void;
   onFilledAccount?: (account: string) => void;
 };
 
 /**
- * 忘記帳號／忘記密碼 — Email 與簡訊雙通道通知
+ * 忘記帳號／密碼 — 僅以註冊手機簡訊通知
  */
-export default function ForgotAccessPanel({
-  initialAccount = '',
-  onBack,
-  onFilledAccount,
-}: Props) {
+export default function ForgotAccessPanel({ onBack, onFilledAccount }: Props) {
   const [tab, setTab] = useState<Tab>('password');
-  const [pwStep, setPwStep] = useState<PwStep>('account');
-  const [account, setAccount] = useState(initialAccount);
+  const [pwStep, setPwStep] = useState<PwStep>('phone');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -42,29 +36,26 @@ export default function ForgotAccessPanel({
   async function sendCode() {
     setError('');
     setInfo('');
-    const a = account.trim();
-    if (!a) {
-      setError('請輸入帳號（Email 或手機）');
+    if (!phone.trim()) {
+      setError('請輸入註冊時的手機號碼');
       return;
     }
     setBusy(true);
     try {
       const res = await api<{
         ok: boolean;
-        mailSent?: boolean;
         smsSent?: boolean;
         message?: string;
         debugCode?: string;
       }>(
         '/auth/forgot-password',
-        { method: 'POST', body: JSON.stringify({ account: a }) },
+        { method: 'POST', body: JSON.stringify({ phone: phone.trim() }) },
         true,
       );
-      let msg = res.message || '請查收驗證碼（Email／簡訊）';
+      let msg = res.message || '請查收簡訊驗證碼';
       if (res.debugCode) msg += `\n（測試碼：${res.debugCode}）`;
       setInfo(msg);
       setPwStep('code');
-      onFilledAccount?.(a);
     } catch (err) {
       setError(
         err instanceof ApiError
@@ -96,7 +87,7 @@ export default function ForgotAccessPanel({
         {
           method: 'POST',
           body: JSON.stringify({
-            account: account.trim(),
+            phone: phone.trim(),
             code: code.trim(),
             newPassword,
           }),
@@ -104,7 +95,6 @@ export default function ForgotAccessPanel({
         true,
       );
       setInfo(res.message || '密碼已更新');
-      onFilledAccount?.(account.trim());
       setTimeout(onBack, 1200);
     } catch (err) {
       setError(
@@ -131,22 +121,16 @@ export default function ForgotAccessPanel({
       const res = await api<{
         ok: boolean;
         found?: boolean;
-        emailHint?: string;
-        mailSent?: boolean;
+        accountHint?: string;
         smsSent?: boolean;
         message?: string;
       }>(
         '/auth/hint-account',
-        {
-          method: 'POST',
-          body: JSON.stringify({ phone: phone.trim() }),
-        },
+        { method: 'POST', body: JSON.stringify({ phone: phone.trim() }) },
         true,
       );
       setInfo(res.message || '');
-      if (res.emailHint) {
-        // 方便回到登入時填入（遮罩不可登入，僅提示）
-      }
+      if (res.accountHint) onFilledAccount?.(res.accountHint.replace(/\*/g, ''));
     } catch (err) {
       setError(
         err instanceof ApiError
@@ -164,7 +148,7 @@ export default function ForgotAccessPanel({
     <View style={styles.wrap}>
       <Text style={styles.title}>忘記帳號 / 忘記密碼</Text>
       <Text style={styles.sub}>
-        驗證與帳號提醒會同時透過 Email 與手機簡訊通知。
+        請使用註冊時留下的手機號碼；驗證碼與帳號提醒以簡訊通知。
       </Text>
 
       <View style={styles.tabs}>
@@ -198,132 +182,106 @@ export default function ForgotAccessPanel({
         </Pressable>
       </View>
 
-      {tab === 'password' ? (
+      <View style={styles.field}>
+        <Ionicons name="call-outline" size={18} color={theme.color.inkMuted} />
+        <TextInput
+          style={styles.input}
+          placeholder="註冊時的手機號碼"
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          editable={tab === 'account' || pwStep === 'phone' || !busy}
+          placeholderTextColor={theme.color.inkMuted}
+        />
+      </View>
+
+      {tab === 'password' && pwStep === 'code' ? (
         <>
           <View style={styles.field}>
             <Ionicons
-              name="person-circle-outline"
+              name="keypad-outline"
               size={18}
               color={theme.color.inkMuted}
             />
             <TextInput
               style={styles.input}
-              placeholder="帳號（Email 或手機）"
-              value={account}
-              onChangeText={setAccount}
-              autoCapitalize="none"
-              editable={pwStep === 'account' || !busy}
+              placeholder="6 碼驗證碼"
+              value={code}
+              onChangeText={setCode}
+              keyboardType="number-pad"
+              maxLength={8}
               placeholderTextColor={theme.color.inkMuted}
             />
           </View>
+          <View style={styles.field}>
+            <Ionicons
+              name="lock-closed-outline"
+              size={18}
+              color={theme.color.inkMuted}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="新密碼（至少 6 字元）"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry={!showPw}
+              placeholderTextColor={theme.color.inkMuted}
+            />
+            <Pressable onPress={() => setShowPw((v) => !v)} hitSlop={8}>
+              <Ionicons
+                name={showPw ? 'eye-off-outline' : 'eye-outline'}
+                size={18}
+                color={theme.color.inkMuted}
+              />
+            </Pressable>
+          </View>
+        </>
+      ) : null}
 
-          {pwStep === 'code' ? (
-            <>
-              <View style={styles.field}>
-                <Ionicons
-                  name="keypad-outline"
-                  size={18}
-                  color={theme.color.inkMuted}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="6 碼驗證碼"
-                  value={code}
-                  onChangeText={setCode}
-                  keyboardType="number-pad"
-                  maxLength={8}
-                  placeholderTextColor={theme.color.inkMuted}
-                />
-              </View>
-              <View style={styles.field}>
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={18}
-                  color={theme.color.inkMuted}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="新密碼（至少 6 字元）"
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  secureTextEntry={!showPw}
-                  placeholderTextColor={theme.color.inkMuted}
-                />
-                <Pressable onPress={() => setShowPw((v) => !v)} hitSlop={8}>
-                  <Ionicons
-                    name={showPw ? 'eye-off-outline' : 'eye-outline'}
-                    size={18}
-                    color={theme.color.inkMuted}
-                  />
-                </Pressable>
-              </View>
-            </>
-          ) : null}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {info ? <Text style={styles.info}>{info}</Text> : null}
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {info ? <Text style={styles.info}>{info}</Text> : null}
-
+      {tab === 'password' ? (
+        <>
           <Pressable
             style={[styles.btn, busy && { opacity: 0.65 }]}
-            onPress={pwStep === 'account' ? sendCode : submitNewPassword}
+            onPress={pwStep === 'phone' ? sendCode : submitNewPassword}
             disabled={busy}
           >
             {busy ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.btnText}>
-                {pwStep === 'account' ? '寄送驗證碼（Email＋簡訊）' : '確認重設密碼'}
+                {pwStep === 'phone' ? '簡訊寄送驗證碼' : '確認重設密碼'}
               </Text>
             )}
           </Pressable>
-
           {pwStep === 'code' ? (
             <Pressable
               onPress={() => {
-                setPwStep('account');
+                setPwStep('phone');
                 setCode('');
                 setNewPassword('');
                 setError('');
                 setInfo('');
               }}
             >
-              <Text style={styles.link}>重新寄送／改帳號</Text>
+              <Text style={styles.link}>重新寄送／改手機</Text>
             </Pressable>
           ) : null}
         </>
       ) : (
-        <>
-          <View style={styles.field}>
-            <Ionicons
-              name="call-outline"
-              size={18}
-              color={theme.color.inkMuted}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="註冊時的手機號碼"
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-              placeholderTextColor={theme.color.inkMuted}
-            />
-          </View>
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {info ? <Text style={styles.info}>{info}</Text> : null}
-
-          <Pressable
-            style={[styles.btn, busy && { opacity: 0.65 }]}
-            onPress={lookupAccount}
-            disabled={busy}
-          >
-            {busy ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.btnText}>以 Email＋簡訊通知帳號</Text>
-            )}
-          </Pressable>
-        </>
+        <Pressable
+          style={[styles.btn, busy && { opacity: 0.65 }]}
+          onPress={lookupAccount}
+          disabled={busy}
+        >
+          {busy ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.btnText}>簡訊通知帳號</Text>
+          )}
+        </Pressable>
       )}
 
       <Pressable onPress={onBack}>

@@ -118,16 +118,15 @@ export async function loginRequest(account: string, password: string) {
 }
 
 export async function registerRequest(
-  email: string,
+  account: string,
   password: string,
-  displayName: string,
   phone: string,
 ) {
   const data = await api<Tokens>(
     '/auth/register',
     {
       method: 'POST',
-      body: JSON.stringify({ email, password, displayName, phone }),
+      body: JSON.stringify({ account, password, phone }),
     },
     true,
   );

@@ -103,22 +103,22 @@ Render 免費 Postgres 有時會被刪／無法連線。可二選一：
 
 ---
 
-## 四之一、忘記密碼／帳號通知（Email＋簡訊）
+## 四之一、忘記帳號／密碼（簡訊）
 
-App 登入改為「帳號＋密碼（至少 6 字元）」；忘記時會同時嘗試寄 **Email** 與 **簡訊**。
+註冊欄位為：**帳號（顯示名稱）／手機／密碼**（不必 Email）。  
+忘記帳號或密碼時，以註冊手機 **簡訊** 通知。
 
-在 **churchsheep-api** Environment 設定：
+在 **churchsheep-api** Environment 設定 Twilio：
 
 | 變數 | 說明 |
 |------|------|
-| `RESEND_API_KEY` | [Resend](https://resend.com) API Key（寄信） |
-| `MAIL_FROM` | 寄件者，例：`成二牧區 <onboarding@resend.dev>` |
-| `TWILIO_ACCOUNT_SID` | [Twilio](https://www.twilio.com) Account SID（簡訊） |
+| `TWILIO_ACCOUNT_SID` | Twilio Account SID |
 | `TWILIO_AUTH_TOKEN` | Twilio Auth Token |
-| `TWILIO_FROM` | Twilio 簡訊號碼，例：`+1681……` |
-| `BRAND_NAME` | 選填，信／簡訊上顯示名稱 |
+| `TWILIO_FROM` | 簡訊號碼，例：`+1681……` |
+| `PASSWORD_RESET_RETURN_CODE` | 測試用：設 `true` 時 App 可顯示驗證碼 |
+| `BRAND_NAME` | 選填，簡訊顯示名稱 |
 
-未設定時驗證碼仍會產生並寫入 Render Logs；畫面會提示聯絡同工。註冊時需填手機，舊帳號若無手機請請同工補資料或重新註冊。
+未設定 Twilio 時，驗證碼會寫入 Render Logs；畫面會提示聯絡同工。
 
 ---
 

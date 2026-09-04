@@ -24,11 +24,14 @@ datasource db {
 
 model User {
   id            String   @id @default(uuid())
-  email         String   @unique
+  // 選填；後台管理員仍可用。會友註冊不必填 Email。
+  email         String?  @unique
   // bcrypt/argon2 雜湊，不存明文 (§四.2)
   passwordHash  String
-  displayName   String
-  phone         String?
+  // 登入帳號＝顯示名稱（繁中／英／數字），唯一
+  displayName   String   @unique
+  // 註冊必填；忘記帳號／密碼以簡訊通知
+  phone         String?  @unique
   avatarUrl     String?
   role          String   @default("MEMBER")
   isMinor       Boolean  @default(false) // 未成年，觸發監護人同意/資訊揭露限制
@@ -58,7 +61,6 @@ model User {
   passwordResets     PasswordReset[]
   auditLogs          AuditLog[]
 
-  @@index([phone])
   @@map("users")
 }
 

@@ -18,8 +18,10 @@ import { ApiError } from '../lib/api';
 import { theme } from '../theme';
 import ForgotAccessPanel from './ForgotAccessPanel';
 
+const ACCOUNT_OK = /^[\u4e00-\u9fff\u3400-\u4dbfa-zA-Z0-9]{2,32}$/;
+
 /**
- * 成二牧區登入 — 帳號＋密碼（至少 6 字元）
+ * 成二牧區登入 — 帳號（顯示名稱）＋密碼；註冊另填手機
  */
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -27,7 +29,6 @@ export default function LoginScreen() {
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
@@ -37,16 +38,17 @@ export default function LoginScreen() {
     setError('');
     setBusy(true);
     try {
-      if (password.length < 6) throw new Error('密碼至少 6 字元');
+      if (password.length < 6) throw new Error('密碼至少 6 字元（英文、數字皆可）');
       if (mode === 'login') {
+        if (!account.trim()) throw new Error('請輸入帳號');
         await signIn(account.trim(), password);
       } else {
-        if (!displayName.trim()) throw new Error('請填寫顯示名稱');
-        if (!account.trim().includes('@')) {
-          throw new Error('註冊帳號請使用電子郵件');
+        const a = account.trim();
+        if (!ACCOUNT_OK.test(a)) {
+          throw new Error('帳號限 2～32 字，可為繁體中文、英文、數字');
         }
-        if (!phone.trim()) throw new Error('請填寫手機號碼（簡訊通知用）');
-        await register(account.trim(), password, displayName.trim(), phone.trim());
+        if (!phone.trim()) throw new Error('請填寫手機號碼（忘記帳號／密碼用）');
+        await register(a, password, phone.trim());
       }
     } catch (e) {
       setError(
@@ -80,7 +82,6 @@ export default function LoginScreen() {
         <View style={styles.card}>
           {mode === 'forgot' ? (
             <ForgotAccessPanel
-              initialAccount={account}
               onBack={() => {
                 setMode('login');
                 setError('');
@@ -95,25 +96,8 @@ export default function LoginScreen() {
               <Text style={styles.cardSub}>
                 {mode === 'login'
                   ? '使用帳號與密碼登入（密碼至少 6 字元）'
-                  : '註冊需填 Email 帳號與手機（忘記時可收信／簡訊）'}
+                  : '註冊請填：帳號、手機、密碼（不必 Email）'}
               </Text>
-
-              {mode === 'register' ? (
-                <View style={styles.field}>
-                  <Ionicons
-                    name="person-outline"
-                    size={18}
-                    color={theme.color.inkMuted}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="顯示名稱"
-                    value={displayName}
-                    onChangeText={setDisplayName}
-                    placeholderTextColor={theme.color.inkMuted}
-                  />
-                </View>
-              ) : null}
 
               <View style={styles.field}>
                 <Ionicons
@@ -123,15 +107,10 @@ export default function LoginScreen() {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder={
-                    mode === 'login' ? '帳號（Email 或手機）' : '帳號（電子郵件）'
-                  }
+                  placeholder="帳號（繁中／英文／數字）"
                   value={account}
                   onChangeText={setAccount}
                   autoCapitalize="none"
-                  keyboardType={
-                    mode === 'login' ? 'default' : 'email-address'
-                  }
                   placeholderTextColor={theme.color.inkMuted}
                 />
               </View>
@@ -162,7 +141,7 @@ export default function LoginScreen() {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="密碼（至少 6 字元）"
+                  placeholder="密碼（至少 6 字元，英文／數字）"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPw}

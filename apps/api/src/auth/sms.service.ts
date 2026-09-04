@@ -85,12 +85,12 @@ export class SmsService {
 
   async sendAccountHint(
     phone: string,
-    emailHint: string,
+    accountName: string,
     brandName: string,
   ): Promise<boolean> {
     return this.send(
       phone,
-      `【${brandName}】您的登入帳號為：${emailHint}`,
+      `【${brandName}】您的登入帳號為：${accountName}`,
     );
   }
 }
