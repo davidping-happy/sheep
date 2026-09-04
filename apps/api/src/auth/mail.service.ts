@@ -1,8 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+export type MailSendResult = {
+  ok: boolean;
+  /** 未設定／API 失敗時的簡短原因（可給使用者看） */
+  error?: string;
+};
+
 /**
- * 輕量寄信：Resend HTTP API（免額度足夠牧區用）。
- * 環境變數：RESEND_API_KEY、MAIL_FROM（例：成二牧區 <onboarding@resend.dev>）
+ * 輕量寄信：Resend HTTP API。
+ * 環境變數：RESEND_API_KEY、MAIL_FROM
+ * 注意：MAIL_FROM 用 onboarding@resend.dev 時，只能寄到 Resend 帳號自己的 Email。
  */
 @Injectable()
 export class MailService {
@@ -18,7 +25,7 @@ export class MailService {
     to: string,
     code: string,
     brandName: string,
-  ): Promise<boolean> {
+  ): Promise<MailSendResult> {
     const subject = `【${brandName}】密碼重設驗證碼`;
     const html = `
       <p>您好，</p>
@@ -33,7 +40,7 @@ export class MailService {
     to: string,
     accountEmail: string,
     brandName: string,
-  ): Promise<boolean> {
+  ): Promise<MailSendResult> {
     const subject = `【${brandName}】登入帳號提醒`;
     const html = `
       <p>您好，</p>
@@ -48,14 +55,17 @@ export class MailService {
     to: string,
     subject: string,
     html: string,
-  ): Promise<boolean> {
+  ): Promise<MailSendResult> {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     const from = process.env.MAIL_FROM?.trim();
     if (!apiKey || !from) {
       this.logger.warn(
         '未設定 RESEND_API_KEY／MAIL_FROM，無法寄送郵件',
       );
-      return false;
+      return {
+        ok: false,
+        error: '伺服器尚未設定 RESEND_API_KEY／MAIL_FROM',
+      };
     }
 
     try {
@@ -69,15 +79,39 @@ export class MailService {
       });
       if (!res.ok) {
         const body = await res.text();
-        this.logger.error(`Resend 寄信失敗 ${res.status}: ${body.slice(0, 200)}`);
-        return false;
+        this.logger.error(`Resend 寄信失敗 ${res.status}: ${body.slice(0, 300)}`);
+        const lower = body.toLowerCase();
+        if (
+          res.status === 403 ||
+          lower.includes('only send testing emails') ||
+          lower.includes('verify a domain')
+        ) {
+          return {
+            ok: false,
+            error:
+              'Resend 測試寄件只能寄到「註冊 Resend 的那個 Email」。請改用該信箱測試，或到 Resend 驗證自己的網域後改 MAIL_FROM。',
+          };
+        }
+        if (res.status === 401 || lower.includes('api key')) {
+          return {
+            ok: false,
+            error: 'RESEND_API_KEY 無效，請到 Resend 重新建立並更新 Render。',
+          };
+        }
+        return {
+          ok: false,
+          error: `寄信失敗（Resend ${res.status}）。請查看 Render Logs。`,
+        };
       }
-      return true;
+      return { ok: true };
     } catch (err) {
       this.logger.error(
         `Resend 寄信例外: ${err instanceof Error ? err.message : err}`,
       );
-      return false;
+      return {
+        ok: false,
+        error: '寄信連線失敗，請稍後再試。',
+      };
     }
   }
 }

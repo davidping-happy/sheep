@@ -218,16 +218,17 @@ export class AuthService {
     });
 
     const brand = this.brandName();
-    const [mailSent, smsSent] = await Promise.all([
+    const [mailResult, smsSent] = await Promise.all([
       this.mail.sendPasswordResetCode(user.email, code, brand),
       user.phone
         ? this.sms.sendPasswordResetCode(user.phone, code, brand)
         : Promise.resolve(false),
     ]);
+    const mailSent = mailResult.ok;
 
     if (!mailSent && !smsSent) {
       this.logger.warn(
-        `password reset code for ${user.email}/${user.phone ?? '-'}: ${code}（Email／簡訊皆未送出）`,
+        `password reset code for ${user.email}/${user.phone ?? '-'}: ${code}（Email／簡訊皆未送出）${mailResult.error ? ` — ${mailResult.error}` : ''}`,
       );
     }
 
@@ -239,13 +240,21 @@ export class AuthService {
     if (mailSent) channels.push('Email');
     if (smsSent) channels.push('簡訊');
 
+    let message: string;
+    if (channels.length) {
+      message = `驗證碼已透過「${channels.join('、')}」送出，約 15 分鐘內有效。`;
+    } else if (mailResult.error) {
+      message = mailResult.error;
+    } else {
+      message =
+        '驗證碼已產生，但寄信／簡訊尚未設定完成。請聯絡牧區同工，或稍後再試。';
+    }
+
     return {
       ok: true as const,
       mailSent,
       smsSent,
-      message: channels.length
-        ? `驗證碼已透過「${channels.join('、')}」送出，約 15 分鐘內有效。`
-        : '驗證碼已產生，但寄信／簡訊尚未設定完成。請聯絡牧區同工，或稍後再試。',
+      message,
       ...(debug ? { debugCode: code } : {}),
     };
   }
@@ -364,12 +373,13 @@ export class AuthService {
     const emailHint = this.maskEmail(fullEmail);
     const brand = this.brandName();
 
-    const [mailSent, smsSent] = await Promise.all([
+    const [mailResult, smsSent] = await Promise.all([
       this.mail.sendAccountHint(fullEmail, fullEmail, brand),
       user.phone
         ? this.sms.sendAccountHint(user.phone, fullEmail, brand)
         : Promise.resolve(false),
     ]);
+    const mailSent = mailResult.ok;
 
     const channels: string[] = [];
     if (mailSent) channels.push('Email');
@@ -383,7 +393,9 @@ export class AuthService {
       smsSent,
       message: channels.length
         ? `已透過「${channels.join('、')}」通知您的登入帳號（提示：${emailHint}）。`
-        : `找到帳號提示：${emailHint}。寄信／簡訊尚未設定時，請聯絡牧區同工確認完整帳號。`,
+        : mailResult.error
+          ? `${mailResult.error}（帳號提示：${emailHint}）`
+          : `找到帳號提示：${emailHint}。寄信／簡訊尚未設定時，請聯絡牧區同工確認完整帳號。`,
     };
   }
 
