@@ -14,8 +14,8 @@ const outDir = path.join(adminRoot, 'public', 'downloads');
 
 const APK_URL =
   process.env.APK_MIRROR_URL ||
-  'https://github.com/davidping-happy/sheep/releases/download/v1.1.9-preview/churchsheep-1.1.9.apk';
-const FILE_NAME = process.env.APK_FILE_NAME || 'churchsheep-1.1.9.apk';
+  'https://github.com/davidping-happy/sheep/releases/download/v1.1.12-preview/churchsheep-1.1.12.apk';
+const FILE_NAME = process.env.APK_FILE_NAME || 'churchsheep-1.1.12.apk';
 const LATEST_NAME = 'churchsheep-latest.apk';
 
 async function main() {
