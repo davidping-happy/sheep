@@ -15,14 +15,14 @@ https://churchsheep-api.onrender.com/downloads/churchsheep-latest.apk
 
 ### 備用
 
-- GitHub：https://github.com/davidping-happy/sheep/releases/download/v1.1.12-preview/churchsheep-1.1.12.apk
+- GitHub：https://github.com/davidping-happy/sheep/releases/download/v1.1.13-preview/churchsheep-1.1.13.apk
 
-> 1.1.12 主日崇拜可切換「成二牧區專屬頻道」。
+> 1.1.13 改為純 Email 找回帳號／密碼，並保留雙頻道主日崇拜。
 
 ## 短訊範本
 
 ```
-【成二牧區 App 1.1.9】
+【成二牧區 App 1.1.13】
 請用 Chrome 打開（勿用 LINE）：
 https://churchsheep-api.onrender.com/downloads/churchsheep-latest.apk
 下載後覆蓋安裝。
