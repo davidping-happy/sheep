@@ -12,7 +12,7 @@ import { ApiError, api } from '../lib/api';
 import { theme } from '../theme';
 
 type Tab = 'password' | 'account';
-type PwStep = 'phone' | 'code';
+type PwStep = 'email' | 'code';
 
 type Props = {
   onBack: () => void;
@@ -20,12 +20,12 @@ type Props = {
 };
 
 /**
- * 忘記帳號／密碼 — 僅以註冊手機簡訊通知
+ * 忘記帳號／密碼 — 僅以備用 Email 找回
  */
 export default function ForgotAccessPanel({ onBack, onFilledAccount }: Props) {
   const [tab, setTab] = useState<Tab>('password');
-  const [pwStep, setPwStep] = useState<PwStep>('phone');
-  const [phone, setPhone] = useState('');
+  const [pwStep, setPwStep] = useState<PwStep>('email');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -36,23 +36,23 @@ export default function ForgotAccessPanel({ onBack, onFilledAccount }: Props) {
   async function sendCode() {
     setError('');
     setInfo('');
-    if (!phone.trim()) {
-      setError('請輸入註冊時的手機號碼');
+    if (!email.trim()) {
+      setError('請輸入註冊時的備用 Email');
       return;
     }
     setBusy(true);
     try {
       const res = await api<{
         ok: boolean;
-        smsSent?: boolean;
+        mailSent?: boolean;
         message?: string;
         debugCode?: string;
       }>(
         '/auth/forgot-password',
-        { method: 'POST', body: JSON.stringify({ phone: phone.trim() }) },
+        { method: 'POST', body: JSON.stringify({ email: email.trim() }) },
         true,
       );
-      let msg = res.message || '請查收簡訊驗證碼';
+      let msg = res.message || '請查收 Email 驗證碼';
       if (res.debugCode) msg += `\n（測試碼：${res.debugCode}）`;
       setInfo(msg);
       setPwStep('code');
@@ -87,7 +87,7 @@ export default function ForgotAccessPanel({ onBack, onFilledAccount }: Props) {
         {
           method: 'POST',
           body: JSON.stringify({
-            phone: phone.trim(),
+            email: email.trim(),
             code: code.trim(),
             newPassword,
           }),
@@ -112,8 +112,8 @@ export default function ForgotAccessPanel({ onBack, onFilledAccount }: Props) {
   async function lookupAccount() {
     setError('');
     setInfo('');
-    if (!phone.trim()) {
-      setError('請輸入註冊時的手機號碼');
+    if (!email.trim()) {
+      setError('請輸入註冊時的備用 Email');
       return;
     }
     setBusy(true);
@@ -122,11 +122,11 @@ export default function ForgotAccessPanel({ onBack, onFilledAccount }: Props) {
         ok: boolean;
         found?: boolean;
         accountHint?: string;
-        smsSent?: boolean;
+        mailSent?: boolean;
         message?: string;
       }>(
         '/auth/hint-account',
-        { method: 'POST', body: JSON.stringify({ phone: phone.trim() }) },
+        { method: 'POST', body: JSON.stringify({ email: email.trim() }) },
         true,
       );
       setInfo(res.message || '');
@@ -148,7 +148,7 @@ export default function ForgotAccessPanel({ onBack, onFilledAccount }: Props) {
     <View style={styles.wrap}>
       <Text style={styles.title}>忘記帳號 / 忘記密碼</Text>
       <Text style={styles.sub}>
-        請用註冊手機；驗證碼優先簡訊，失敗時改寄備用 Email。
+        請用註冊時留下的備用 Email 找回帳號或重設密碼。
       </Text>
 
       <View style={styles.tabs}>
@@ -183,14 +183,15 @@ export default function ForgotAccessPanel({ onBack, onFilledAccount }: Props) {
       </View>
 
       <View style={styles.field}>
-        <Ionicons name="call-outline" size={18} color={theme.color.inkMuted} />
+        <Ionicons name="mail-outline" size={18} color={theme.color.inkMuted} />
         <TextInput
           style={styles.input}
-          placeholder="註冊時的手機號碼"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-          editable={tab === 'account' || pwStep === 'phone' || !busy}
+          placeholder="註冊時的備用 Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          editable={tab === 'account' || pwStep === 'email' || !busy}
           placeholderTextColor={theme.color.inkMuted}
         />
       </View>
@@ -245,28 +246,28 @@ export default function ForgotAccessPanel({ onBack, onFilledAccount }: Props) {
         <>
           <Pressable
             style={[styles.btn, busy && { opacity: 0.65 }]}
-            onPress={pwStep === 'phone' ? sendCode : submitNewPassword}
+            onPress={pwStep === 'email' ? sendCode : submitNewPassword}
             disabled={busy}
           >
             {busy ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.btnText}>
-                {pwStep === 'phone' ? '簡訊寄送驗證碼' : '確認重設密碼'}
+                {pwStep === 'email' ? '寄送 Email 驗證碼' : '確認重設密碼'}
               </Text>
             )}
           </Pressable>
           {pwStep === 'code' ? (
             <Pressable
               onPress={() => {
-                setPwStep('phone');
+                setPwStep('email');
                 setCode('');
                 setNewPassword('');
                 setError('');
                 setInfo('');
               }}
             >
-              <Text style={styles.link}>重新寄送／改手機</Text>
+              <Text style={styles.link}>重新寄送／改 Email</Text>
             </Pressable>
           ) : null}
         </>
@@ -279,7 +280,7 @@ export default function ForgotAccessPanel({ onBack, onFilledAccount }: Props) {
           {busy ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.btnText}>簡訊通知帳號</Text>
+            <Text style={styles.btnText}>寄送帳號提醒 Email</Text>
           )}
         </Pressable>
       )}

@@ -21,14 +21,14 @@ import {
   RegisterDto,
   ResetPasswordDto,
 } from './dto/auth.dto';
-import { MailService, type MailSendResult } from './mail.service';
+import { MailService } from './mail.service';
 import { SmsService } from './sms.service';
 
 /**
  * 身份驗證：
  *  - 帳號＝顯示名稱（繁中／英／數字），Email 選填備援
  *  - 註冊：帳號／手機／密碼（+ 選填 Email）
- *  - 忘記帳號／密碼：簡訊優先（三竹／Every8d），Email 備援
+ *  - 忘記帳號／密碼：改由備用 Email 找回，不再依賴簡訊
  */
 @Injectable()
 export class AuthService {
@@ -67,7 +67,7 @@ export class AuthService {
       });
       if (phoneTaken) throw new ConflictException('此手機號碼已被註冊');
 
-      const email = dto.email?.trim().toLowerCase() || null;
+      const email = dto.email?.trim().toLowerCase();
       if (email) {
         const emailTaken = await this.prisma.user.findFirst({
           where: { email: { equals: email, mode: 'insensitive' } },
@@ -77,7 +77,6 @@ export class AuthService {
 
       const user = await this.prisma.user.create({
         data: {
-          email,
           phone,
           passwordHash: await bcrypt.hash(dto.password, 12),
           displayName: account,
@@ -85,7 +84,8 @@ export class AuthService {
           guardianName: dto.guardianName,
           guardianPhone: dto.guardianPhone,
           consentAt: new Date(),
-        },
+          ...(email ? { email } : {}),
+        } as any,
       });
       return await this.issueTokens(
         user.id,
@@ -199,28 +199,33 @@ export class AuthService {
     });
   }
 
-  /** 忘記密碼：簡訊優先，Email 備援 */
+  /** 忘記密碼：寄送驗證碼到備用 Email */
   async forgotPassword(dto: ForgotPasswordDto) {
     await this.ensureDb();
     await this.schemaSync.ensureSchema();
 
-    const phone = this.sms.normalizeTwPhone(dto.phone);
+    const email = dto.email.trim().toLowerCase();
     const generic = {
       ok: true as const,
       smsSent: false,
       mailSent: false,
-      message:
-        '若此手機已註冊，驗證碼將優先以簡訊寄出（失敗時改寄備用 Email）。',
+      message: '若此 Email 已註冊，驗證碼將寄到您的備用 Email。',
     };
-    if (!phone) return generic;
+    if (!email) return generic;
 
     const user = await this.prisma.user.findFirst({
       where: {
         isActive: true,
-        phone: { in: this.phoneVariants(phone) },
+        email: { equals: email, mode: 'insensitive' },
       },
     });
     if (!user) return generic;
+    if (!user.email) {
+      return {
+        ...generic,
+        message: '此帳號尚未設定備用 Email，請聯絡牧區同工協助。',
+      };
+    }
 
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const expiresAt = new Date(Date.now() + 15 * 60_000);
@@ -238,23 +243,15 @@ export class AuthService {
     });
 
     const brand = this.brandName();
-    const smsResult = await this.sms.sendPasswordResetCode(
-      user.phone!,
+    const mailResult = await this.mail.sendPasswordResetCode(
+      user.email,
       code,
       brand,
     );
-    let mailResult: MailSendResult = { ok: false };
-    if (!smsResult.ok && user.email) {
-      mailResult = await this.mail.sendPasswordResetCode(
-        user.email,
-        code,
-        brand,
-      );
-    }
 
-    if (!smsResult.ok && !mailResult.ok) {
+    if (!mailResult.ok) {
       this.logger.warn(
-        `password reset code for ${user.phone}/${user.email ?? '-'}: ${code}（簡訊／Email 皆未送出） sms=${smsResult.error ?? ''} mail=${mailResult.error ?? ''}`,
+        `password reset code for ${user.email}: ${code}（Email 未送出） mail=${mailResult.error ?? ''}`,
       );
     }
 
@@ -262,25 +259,16 @@ export class AuthService {
       process.env.PASSWORD_RESET_RETURN_CODE === '1' ||
       process.env.PASSWORD_RESET_RETURN_CODE === 'true';
 
-    const channels: string[] = [];
-    if (smsResult.ok) channels.push('簡訊');
-    if (mailResult.ok) channels.push('Email');
-
     let message: string;
-    if (channels.length) {
-      message = `驗證碼已透過「${channels.join('、')}」送出，約 15 分鐘內有效。`;
-    } else if (smsResult.error && !user.email) {
-      message = `${smsResult.error}。此帳號未留備用 Email，請聯絡牧區同工協助。`;
+    if (mailResult.ok) {
+      message = '驗證碼已寄到您的備用 Email，約 15 分鐘內有效。';
     } else {
-      message =
-        smsResult.error ||
-        mailResult.error ||
-        '驗證碼已產生，但簡訊／Email 皆未送出。請聯絡牧區同工。';
+      message = mailResult.error || '驗證碼已產生，但 Email 未送出。請聯絡牧區同工。';
     }
 
     return {
       ok: true as const,
-      smsSent: smsResult.ok,
+      smsSent: false,
       mailSent: mailResult.ok,
       message,
       ...(debug ? { debugCode: code } : {}),
@@ -291,15 +279,15 @@ export class AuthService {
     await this.ensureDb();
     await this.schemaSync.ensureSchema();
 
-    const phone = this.sms.normalizeTwPhone(dto.phone);
-    if (!phone) {
+    const email = dto.email.trim().toLowerCase();
+    if (!email) {
       throw new UnauthorizedException('驗證碼無效或已過期');
     }
 
     const user = await this.prisma.user.findFirst({
       where: {
         isActive: true,
-        phone: { in: this.phoneVariants(phone) },
+        email: { equals: email, mode: 'insensitive' },
       },
     });
     if (!user) {
@@ -347,63 +335,50 @@ export class AuthService {
     return { ok: true, message: '密碼已更新，請用新密碼登入' };
   }
 
-  /** 忘記帳號：以手機簡訊通知登入帳號（顯示名稱） */
+  /** 忘記帳號：以備用 Email 通知登入帳號（顯示名稱） */
   async hintAccount(dto: HintAccountDto) {
     await this.ensureDb();
     await this.schemaSync.ensureSchema();
 
-    const phone = this.sms.normalizeTwPhone(dto.phone);
-    if (!phone) {
-      throw new BadRequestException('請輸入有效手機號碼');
+    const email = dto.email.trim().toLowerCase();
+    if (!email) {
+      throw new BadRequestException('請輸入有效 Email');
     }
 
     const user = await this.prisma.user.findFirst({
       where: {
         isActive: true,
-        phone: { in: this.phoneVariants(phone) },
+        email: { equals: email, mode: 'insensitive' },
       },
-      select: { displayName: true, phone: true, email: true },
+      select: { displayName: true, email: true },
     });
 
-    if (!user?.phone) {
+    if (!user?.email) {
       return {
         ok: true as const,
         found: false as const,
         smsSent: false,
         mailSent: false,
-        message: '找不到符合的手機號碼。請確認註冊時留下的號碼，或聯絡牧區同工。',
+        message: '找不到符合的 Email。請確認註冊時留下的備用 Email，或聯絡牧區同工。',
       };
     }
 
     const brand = this.brandName();
-    const smsResult = await this.sms.sendAccountHint(
-      user.phone,
+    const mailResult = await this.mail.sendAccountHint(
+      user.email,
       user.displayName,
       brand,
     );
-    let mailResult: MailSendResult = { ok: false };
-    if (!smsResult.ok && user.email) {
-      mailResult = await this.mail.sendAccountHint(
-        user.email,
-        user.displayName,
-        brand,
-      );
-    }
-
-    const channels: string[] = [];
-    if (smsResult.ok) channels.push('簡訊');
-    if (mailResult.ok) channels.push('Email');
 
     return {
       ok: true as const,
       found: true as const,
       accountHint: this.maskAccount(user.displayName),
-      smsSent: smsResult.ok,
+      smsSent: false,
       mailSent: mailResult.ok,
-      message: channels.length
-        ? `已透過「${channels.join('、')}」通知您的登入帳號（提示：${this.maskAccount(user.displayName)}）。`
-        : smsResult.error ||
-          mailResult.error ||
+      message: mailResult.ok
+        ? `已透過 Email 通知您的登入帳號（提示：${this.maskAccount(user.displayName)}）。`
+        : mailResult.error ||
           `找到帳號提示：${this.maskAccount(user.displayName)}。請聯絡牧區同工確認。`,
     };
   }

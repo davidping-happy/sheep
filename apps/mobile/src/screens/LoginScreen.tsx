@@ -21,7 +21,7 @@ import ForgotAccessPanel from './ForgotAccessPanel';
 const ACCOUNT_OK = /^[\u4e00-\u9fff\u3400-\u4dbfa-zA-Z0-9]{2,32}$/;
 
 /**
- * 成二牧區登入 — 帳號（顯示名稱）＋密碼；註冊另填手機
+ * 成二牧區登入 — 帳號（顯示名稱）＋密碼；註冊另填手機與選填 Email
  */
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -48,7 +48,7 @@ export default function LoginScreen() {
         if (!ACCOUNT_OK.test(a)) {
           throw new Error('帳號限 2～32 字，可為繁體中文、英文、數字');
         }
-        if (!phone.trim()) throw new Error('請填寫手機號碼（忘記帳號／密碼用）');
+        if (!phone.trim()) throw new Error('請填寫手機號碼');
         await register(
           a,
           password,
@@ -102,7 +102,7 @@ export default function LoginScreen() {
               <Text style={styles.cardSub}>
                 {mode === 'login'
                   ? '使用帳號與密碼登入（密碼至少 6 字元）'
-                  : '註冊請填帳號、手機、密碼；Email 選填（簡訊備援）'}
+                  : '註冊請填帳號、手機、密碼；Email 選填（供找回帳號／密碼）'}
               </Text>
 
               <View style={styles.field}>
