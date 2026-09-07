@@ -20,6 +20,8 @@ async function bootstrap() {
   ensureDbSsl();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
+  const latestApkUrl =
+    'https://github.com/davidping-happy/sheep/releases/download/v1.1.13-preview/churchsheep-1.1.13.apk';
 
   // APK mirror for Android testers (avoid GitHub/Expo stall in TW)
   app.useStaticAssets(join(process.cwd(), 'public'), {
@@ -34,6 +36,14 @@ async function bootstrap() {
       }
     },
   });
+  app.use(
+    '/downloads/churchsheep-latest.apk',
+    (
+      _req: unknown,
+      res: { redirect: (code: number, url: string) => void },
+    ) =>
+      res.redirect(302, latestApkUrl),
+  );
 
   // 安全標頭 (§四.5 PLATFORM)
   app.use(helmet());
