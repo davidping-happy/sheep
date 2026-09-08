@@ -155,7 +155,7 @@ export class MailService {
         }
         return {
           ok: false,
-          error: `寄信失敗（Brevo ${res.status}）。請查看 Render Logs。`,
+          error: `寄信失敗（Brevo ${res.status}）：${body.slice(0, 200)}`,
         };
       }
       return { ok: true };
