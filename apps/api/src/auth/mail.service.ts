@@ -8,14 +8,17 @@ export type MailSendResult = {
 };
 
 /**
- * 輕量寄信服務，支援兩種後端：
+ * 輕量寄信服務，依序嘗試三種後端（有設定就用）：
  *
- * 1) Gmail／一般 SMTP（優先，免網域，可寄給任何人）
+ * 1) Brevo Email API（推薦，走 HTTPS/443，Render 免費機可用、免網域）
+ *    環境變數：BREVO_API_KEY、MAIL_FROM（已在 Brevo 驗證的寄件信箱）
+ *    選填：MAIL_FROM_NAME（寄件顯示名稱，例如「成二牧區」）
+ *
+ * 2) Gmail／一般 SMTP（本機或 Render 付費機可用；免費機封鎖 25/465/587）
  *    環境變數：SMTP_USER、SMTP_PASS（Gmail 用「應用程式密碼」）
- *    選填：SMTP_HOST（預設 smtp.gmail.com）、SMTP_PORT（預設 465）、
- *          MAIL_FROM_NAME（寄件顯示名稱，例如「成二牧區」）
+ *    選填：SMTP_HOST（預設 smtp.gmail.com）、SMTP_PORT（預設 465）
  *
- * 2) Resend HTTP API（備援）
+ * 3) Resend HTTP API（備援）
  *    環境變數：RESEND_API_KEY、MAIL_FROM
  *    注意：MAIL_FROM 用 onboarding@resend.dev 時，只能寄到 Resend 帳號自己的 Email。
  */
@@ -35,7 +38,12 @@ export class MailService {
     return Boolean(this.smtpUser() && this.smtpPass());
   }
 
+  private useBrevo(): boolean {
+    return Boolean(process.env.BREVO_API_KEY?.trim());
+  }
+
   isConfigured(): boolean {
+    if (this.useBrevo()) return true;
     if (this.useSmtp()) return true;
     return Boolean(
       process.env.RESEND_API_KEY?.trim() && process.env.MAIL_FROM?.trim(),
@@ -77,10 +85,86 @@ export class MailService {
     subject: string,
     html: string,
   ): Promise<MailSendResult> {
+    if (this.useBrevo()) {
+      return this.sendViaBrevo(to, subject, html);
+    }
     if (this.useSmtp()) {
       return this.sendViaSmtp(to, subject, html);
     }
     return this.sendViaResend(to, subject, html);
+  }
+
+  // ---------- Brevo Email API（HTTPS，Render 免費機可用） ----------
+
+  private senderEmail(): string {
+    return (
+      process.env.MAIL_FROM?.trim() || process.env.SMTP_USER?.trim() || ''
+    );
+  }
+
+  private async sendViaBrevo(
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<MailSendResult> {
+    const apiKey = process.env.BREVO_API_KEY?.trim();
+    const email = this.senderEmail();
+    const name = process.env.MAIL_FROM_NAME?.trim();
+    if (!apiKey || !email) {
+      return {
+        ok: false,
+        error: '伺服器尚未設定 BREVO_API_KEY／MAIL_FROM（寄件信箱）。',
+      };
+    }
+    try {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': apiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          sender: name ? { name, email } : { email },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        this.logger.error(`Brevo 寄信失敗 ${res.status}: ${body.slice(0, 300)}`);
+        const lower = body.toLowerCase();
+        if (res.status === 401 || lower.includes('key not found') || lower.includes('unauthorized')) {
+          return {
+            ok: false,
+            error: 'BREVO_API_KEY 無效，請到 Brevo 重新建立並更新 Render。',
+          };
+        }
+        if (
+          lower.includes('sender') &&
+          (lower.includes('not valid') ||
+            lower.includes('not verified') ||
+            lower.includes('does not exist'))
+        ) {
+          return {
+            ok: false,
+            error:
+              '寄件信箱尚未在 Brevo 驗證。請到 Brevo → Senders 驗證 MAIL_FROM 的信箱後再試。',
+          };
+        }
+        return {
+          ok: false,
+          error: `寄信失敗（Brevo ${res.status}）。請查看 Render Logs。`,
+        };
+      }
+      return { ok: true };
+    } catch (err) {
+      this.logger.error(
+        `Brevo 寄信例外: ${err instanceof Error ? err.message : err}`,
+      );
+      return { ok: false, error: '寄信連線失敗，請稍後再試。' };
+    }
   }
 
   // ---------- Gmail / SMTP ----------
@@ -97,6 +181,9 @@ export class MailService {
         user: this.smtpUser(),
         pass: this.smtpPass(),
       },
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 15_000,
     });
     return this.transporter;
   }
