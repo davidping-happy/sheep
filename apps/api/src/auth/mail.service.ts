@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as nodemailer from 'nodemailer';
 
 export type MailSendResult = {
   ok: boolean;
@@ -7,15 +8,35 @@ export type MailSendResult = {
 };
 
 /**
- * 輕量寄信：Resend HTTP API。
- * 環境變數：RESEND_API_KEY、MAIL_FROM
- * 注意：MAIL_FROM 用 onboarding@resend.dev 時，只能寄到 Resend 帳號自己的 Email。
+ * 輕量寄信服務，支援兩種後端：
+ *
+ * 1) Gmail／一般 SMTP（優先，免網域，可寄給任何人）
+ *    環境變數：SMTP_USER、SMTP_PASS（Gmail 用「應用程式密碼」）
+ *    選填：SMTP_HOST（預設 smtp.gmail.com）、SMTP_PORT（預設 465）、
+ *          MAIL_FROM_NAME（寄件顯示名稱，例如「成二牧區」）
+ *
+ * 2) Resend HTTP API（備援）
+ *    環境變數：RESEND_API_KEY、MAIL_FROM
+ *    注意：MAIL_FROM 用 onboarding@resend.dev 時，只能寄到 Resend 帳號自己的 Email。
  */
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
+  private transporter: nodemailer.Transporter | null = null;
+
+  private smtpUser(): string | undefined {
+    return process.env.SMTP_USER?.trim();
+  }
+  private smtpPass(): string | undefined {
+    return process.env.SMTP_PASS?.trim();
+  }
+
+  private useSmtp(): boolean {
+    return Boolean(this.smtpUser() && this.smtpPass());
+  }
 
   isConfigured(): boolean {
+    if (this.useSmtp()) return true;
     return Boolean(
       process.env.RESEND_API_KEY?.trim() && process.env.MAIL_FROM?.trim(),
     );
@@ -56,15 +77,87 @@ export class MailService {
     subject: string,
     html: string,
   ): Promise<MailSendResult> {
+    if (this.useSmtp()) {
+      return this.sendViaSmtp(to, subject, html);
+    }
+    return this.sendViaResend(to, subject, html);
+  }
+
+  // ---------- Gmail / SMTP ----------
+
+  private getTransporter(): nodemailer.Transporter {
+    if (this.transporter) return this.transporter;
+    const host = process.env.SMTP_HOST?.trim() || 'smtp.gmail.com';
+    const port = Number(process.env.SMTP_PORT?.trim() || '465');
+    this.transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: {
+        user: this.smtpUser(),
+        pass: this.smtpPass(),
+      },
+    });
+    return this.transporter;
+  }
+
+  private fromAddress(): string {
+    const user = this.smtpUser()!;
+    const name = process.env.MAIL_FROM_NAME?.trim();
+    return name ? `${name} <${user}>` : user;
+  }
+
+  private async sendViaSmtp(
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<MailSendResult> {
+    try {
+      await this.getTransporter().sendMail({
+        from: this.fromAddress(),
+        to,
+        subject,
+        html,
+      });
+      return { ok: true };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`SMTP 寄信失敗: ${msg}`);
+      const lower = msg.toLowerCase();
+      if (
+        lower.includes('invalid login') ||
+        lower.includes('username and password not accepted') ||
+        lower.includes('535')
+      ) {
+        return {
+          ok: false,
+          error:
+            'Gmail 帳密不正確。請確認 SMTP_USER 為完整 Gmail，SMTP_PASS 為 Google「應用程式密碼」（16 碼、非登入密碼）。',
+        };
+      }
+      return {
+        ok: false,
+        error: '寄信失敗（SMTP）。請稍後再試或查看 Render Logs。',
+      };
+    }
+  }
+
+  // ---------- Resend（備援） ----------
+
+  private async sendViaResend(
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<MailSendResult> {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     const from = process.env.MAIL_FROM?.trim();
     if (!apiKey || !from) {
       this.logger.warn(
-        '未設定 RESEND_API_KEY／MAIL_FROM，無法寄送郵件',
+        '未設定 SMTP_USER／SMTP_PASS 或 RESEND_API_KEY／MAIL_FROM，無法寄送郵件',
       );
       return {
         ok: false,
-        error: '伺服器尚未設定 RESEND_API_KEY／MAIL_FROM',
+        error: '伺服器尚未設定寄信服務（SMTP 或 Resend）',
       };
     }
 
