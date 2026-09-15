@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RemoteImage } from '../components/RemoteImage';
+import { FitRemoteImage } from '../components/FitRemoteImage';
 import { LinkifiedText } from '../components/LinkifiedText';
 import { api, ApiError } from '../lib/api';
 import type { HomeStackParamList } from '../navigation/types';
@@ -61,7 +61,7 @@ export default function AnnouncementDetailScreen({ route }: Props) {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container}>
-      <RemoteImage uri={item.imageUrl} style={styles.image} />
+      <FitRemoteImage uri={item.imageUrl} style={styles.image} maxHeight={560} />
       <Text style={styles.title}>{item.title}</Text>
       <Text style={styles.meta}>
         {item.publishedAt
@@ -84,9 +84,6 @@ const styles = StyleSheet.create({
   },
   container: { padding: 16, paddingBottom: 40 },
   image: {
-    width: '100%',
-    height: 200,
-    borderRadius: theme.radius.md,
     marginBottom: 14,
   },
   title: {
