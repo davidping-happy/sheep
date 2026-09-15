@@ -8,7 +8,10 @@
       "policy": "sdkVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/66020654-93b9-4ffc-8e1f-ef464b21acca"
+      "url": "https://u.expo.dev/66020654-93b9-4ffc-8e1f-ef464b21acca",
+      "requestHeaders": {
+        "expo-channel-name": "preview"
+      }
     },
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
