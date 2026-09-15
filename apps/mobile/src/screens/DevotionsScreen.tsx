@@ -125,18 +125,19 @@ export default function DevotionsScreen() {
   const load = useCallback(async () => {
     setError('');
     // 分開載入：動態牆失敗不應擋「我的筆記」；並保證一定結束 loading
-    const results = await Promise.allSettled([loadMine(), loadFeed()]);
-    const mineFailed = results[0].status === 'rejected';
-    const feedFailed = results[1].status === 'rejected';
-    if (mineFailed) {
-      const reason = results[0].reason;
+    const [mineResult, feedResult] = await Promise.allSettled([
+      loadMine(),
+      loadFeed(),
+    ]);
+    if (mineResult.status === 'rejected') {
+      const reason = mineResult.reason;
       setError(
         reason instanceof ApiError
           ? reason.message
           : '載入筆記失敗，請下拉重試',
       );
-    } else if (feedFailed) {
-      const reason = results[1].reason;
+    } else if (feedResult.status === 'rejected') {
+      const reason = feedResult.reason;
       setError(
         reason instanceof ApiError
           ? `筆記已載入；動態牆暫不可用：${reason.message}`

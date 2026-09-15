@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RemoteImage } from '../components/RemoteImage';
+import { LinkifiedText } from '../components/LinkifiedText';
 import { api, ApiError } from '../lib/api';
 import type { HomeStackParamList } from '../navigation/types';
 import { theme } from '../theme';
@@ -67,7 +68,7 @@ export default function AnnouncementDetailScreen({ route }: Props) {
           ? new Date(item.publishedAt).toLocaleString()
           : ''}
       </Text>
-      <Text style={styles.body}>{item.body}</Text>
+      <LinkifiedText text={item.body} style={styles.body} />
     </ScrollView>
   );
 }
