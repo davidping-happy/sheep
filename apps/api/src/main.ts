@@ -21,7 +21,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
   const latestApkUrl =
-    'https://github.com/davidping-happy/sheep/releases/download/v1.1.13-preview/churchsheep-1.1.13.apk';
+    'https://github.com/davidping-happy/sheep/releases/download/v1.1.14-preview/churchsheep-1.1.14.apk';
 
   // APK mirror for Android testers (avoid GitHub/Expo stall in TW)
   app.useStaticAssets(join(process.cwd(), 'public'), {

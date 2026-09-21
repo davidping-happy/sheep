@@ -12,7 +12,7 @@ const nextConfig = {
       {
         source: '/downloads/churchsheep-latest.apk',
         destination:
-          'https://github.com/davidping-happy/sheep/releases/download/v1.1.13-preview/churchsheep-1.1.13.apk',
+          'https://github.com/davidping-happy/sheep/releases/download/v1.1.14-preview/churchsheep-1.1.14.apk',
         permanent: false,
       },
     ];
